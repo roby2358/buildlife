@@ -1,0 +1,185 @@
+// Builds requests to Jev and Sonnet from the world MIAL, and parses their replies.
+// Pure: no fetch, no DOM. The text in CORE_PREAMBLE and CORE_REPAIR_PROMPT is core
+// and can't be edited by the models (D-16).
+var BL = window.BL = window.BL || {};
+
+BL.minds = (() => {
+  const C = BL.CONFIG;
+  const W = BL.world;
+
+  const CORE_PREAMBLE = `## How your world works (core instructions; you cannot edit these)
+
+Your world is written in MarkdownIsALisp (MIAL), a Lisp whose syntax is Markdown:
+- "# name" starts a definition. Bullets under it form the code tree; 2 spaces of indentation = one level deeper.
+- A bullet's first word is the operator; its sub-bullets (or further words on the same line) are arguments.
+- Backticks make literals: \`12\`, \`0.5\`, \`"text"\`, \`true\`, \`false\`, \`null\`. Bare words are symbols.
+- A literal cannot contain a backtick or a newline. Use the text built-in to make multi-line strings.
+- A definition whose first child is a bare symbol (one parameter), or "- *" with symbol children (several parameters), followed by a body, is a function. A single literal child is a constant. A single "- mial" child is a quoted data constant.
+- Zero-argument definitions are only called by the core; MIAL code cannot call them. Use constants or give the function a parameter.
+- An atom by itself is a value: "- list" alone is the list function, not an empty list. Use \`null\` for an empty list.
+- Special forms: if (test, then, else), let (first child holds bindings "- name" with one expression each, evaluated in order; the rest is the body), lambda (parameter spec, body), mial (quote), eval.
+- Built-ins: + - * / % (+ also joins strings), < <= > >= eq !=, and or not, null? atom? list? error?, car cdr cons list, tag children make-mial mial-of parse-mial print,
+  record (key/value pairs) get put has? keys, length nth append map filter reduce, min max abs floor round clamp, str (any value to string), text (joins arguments as lines; a list argument gives one line per item), join (list, separator).
+- Data is immutable: put returns a new record.
+
+The core calls these definitions (keep their names and parameters, or the world breaks):
+| definition | parameters | must return |
+|---|---|---|
+| initial-state | none | a record (new game only) |
+| tick | state | the next state record; its "events" field holds this tick's events |
+| actions | state | a list of strings: the choices Jev may pick |
+| apply-action | state, action | a state record |
+| jev-system | none | Jev's system prompt (string) |
+| jev-prompt | state, history | Jev's prompt (string) |
+| jev-trigger? | state, events | true to ask Jev now |
+| sonnet-system | none | your own system prompt (string) |
+| sonnet-prompt | state, history | your own prompt (string) |
+| sonnet-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
+
+The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent.
+The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every few seconds or you more often than every few seconds, whatever your triggers say.
+
+## How to reply
+Reply with one JSON object:
+- thought: your private reflection (shown to the neighbour as your thinking).
+- say: what you say aloud to the neighbour, or "" for nothing.
+- edits: a list of world edits, each {comment, source, delete}. source is Markdown holding one or more complete "# name" definitions; each replaces the definition with that name or is added if new. delete lists definition names to remove. comment says why, like a commit message. Use [] for no edits.
+- core_request: a change you would like made to the core JavaScript (which you cannot edit), or "" for none.
+Edits apply immediately and without checks. If the world breaks, you will be asked to repair it.`;
+
+  const CORE_REPAIR_PROMPT = `You are repairing a small simulated world written in MarkdownIsALisp. The world just failed with an error and has stopped.
+Your only job is to make it load and tick again with as little change as possible. Reply with the same JSON object as always, putting the fix in edits; say may be "".`;
+
+  const SONNET_SCHEMA = {
+    type: 'object',
+    properties: {
+      thought: { type: 'string' },
+      say: { type: 'string' },
+      edits: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            comment: { type: 'string' },
+            source: { type: 'string' },
+            delete: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['comment', 'source', 'delete'],
+          additionalProperties: false,
+        },
+      },
+      core_request: { type: 'string' },
+    },
+    required: ['thought', 'say', 'edits', 'core_request'],
+    additionalProperties: false,
+  };
+
+  const fail = (r) => ({ ok: false, error: r.error, definition: r.definition });
+
+  // Jev call rule: system and user text come from MIAL; the schema enum is `actions`.
+  const buildJev = (loaded, state, history) => {
+    const acts = W.actions(loaded, state);
+    if (!acts.ok) return fail(acts);
+    const system = W.jevSystem(loaded);
+    if (!system.ok) return fail(system);
+    const prompt = W.jevPrompt(loaded, state, history);
+    if (!prompt.ok) return fail(prompt);
+    return {
+      ok: true,
+      actions: acts.value,
+      body: {
+        model: C.JEV_MODEL,
+        max_tokens: C.JEV_MAX_TOKENS,
+        messages: [
+          { role: 'system', content: system.value },
+          { role: 'user', content: prompt.value },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: {
+            name: 'jev_decision',
+            strict: true,
+            schema: {
+              type: 'object',
+              properties: { thought: { type: 'string' }, action: { type: 'string', enum: acts.value } },
+              required: ['thought', 'action'],
+              additionalProperties: false,
+            },
+          },
+        },
+      },
+    };
+  };
+
+  // Models sometimes wrap JSON in a code fence even under a schema; accept that.
+  const parseJSON = (text) => {
+    const t = String(text || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '').trim();
+    try { return JSON.parse(t); } catch { return undefined; }
+  };
+
+  const parseJev = (resp, actions) => {
+    const content = resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content;
+    const data = parseJSON(content);
+    if (!data || typeof data.action !== 'string') return { ok: false, error: `Jev's reply was not a valid JSON decision: ${String(content).slice(0, 200)}` };
+    if (!actions.includes(data.action)) return { ok: false, error: `Jev chose "${data.action}", which is not one of: ${actions.join(', ')}` };
+    return { ok: true, action: data.action, thought: typeof data.thought === 'string' ? data.thought : '' };
+  };
+
+  const chatLine = (e) => `[${e.kind}] ${e.text}`;
+
+  // The system text changes only when the world is edited, so it is the cached prefix.
+  const sonnetBody = (system, user) => ({
+    model: C.SONNET_MODEL,
+    max_tokens: C.SONNET_MAX_TOKENS,
+    fallbacks: 'default',
+    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+    messages: [{ role: 'user', content: user }],
+    output_config: { format: { type: 'json_schema', schema: SONNET_SCHEMA } },
+  });
+
+  const sourceSection = (source, version) => `## Current world source (version ${version})\n\n${source}`;
+
+  // Sonnet call rule: sonnet-system + core preamble + full source; sonnet-prompt + recent chat.
+  const buildSonnet = ({ loaded, state, history, chat, source, version, userWaiting }) => {
+    const system = W.sonnetSystem(loaded);
+    if (!system.ok) return fail(system);
+    const prompt = W.sonnetPrompt(loaded, state, history);
+    if (!prompt.ok) return fail(prompt);
+    const recent = chat.slice(-C.CHAT_HISTORY_N).map(chatLine).join('\n') || '(no chat yet)';
+    const user = `${prompt.value}\n\n## Recent chat\n${recent}` +
+      (userWaiting ? '\n\nThe neighbour has just spoken to you and is waiting for a reply.' : '');
+    return { ok: true, body: sonnetBody(`${system.value}\n\n${CORE_PREAMBLE}\n\n${sourceSection(source, version)}`, user) };
+  };
+
+  // Repair rule: fixed prompt, ignores sonnet-system.
+  const buildRepair = ({ source, version, error, definition }) => ({
+    ok: true,
+    body: sonnetBody(
+      `${CORE_REPAIR_PROMPT}\n\n${CORE_PREAMBLE}\n\n${sourceSection(source, version)}`,
+      `The world failed${definition ? ` in "# ${definition}"` : ''} with this error:\n${error}\n\nFix it.`,
+    ),
+  });
+
+  const parseSonnet = (resp) => {
+    if (!resp || !Array.isArray(resp.content)) return { ok: false, error: 'Sonnet returned no content' };
+    if (resp.stop_reason === 'refusal') return { ok: false, error: 'Sonnet declined this request (refusal)' };
+    if (resp.stop_reason === 'max_tokens') return { ok: false, error: 'Sonnet ran out of tokens before finishing its reply' };
+    const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const data = parseJSON(text);
+    if (!data || typeof data !== 'object') return { ok: false, error: `Sonnet's reply was not valid JSON: ${text.slice(0, 200)}` };
+    const edits = Array.isArray(data.edits) ? data.edits.filter(e => e && typeof e === 'object').map(e => ({
+      comment: String(e.comment || '').trim() || '(no comment)',
+      source: String(e.source || ''),
+      delete: Array.isArray(e.delete) ? e.delete.map(String) : [],
+    })) : [];
+    return {
+      ok: true,
+      thought: String(data.thought || ''),
+      say: String(data.say || ''),
+      edits,
+      coreRequest: String(data.core_request || ''),
+    };
+  };
+
+  return { CORE_PREAMBLE, CORE_REPAIR_PROMPT, SONNET_SCHEMA, buildJev, parseJev, buildSonnet, buildRepair, parseSonnet };
+})();

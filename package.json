@@ -1,0 +1,12 @@
+{
+  "name": "buildlife",
+  "private": true,
+  "description": "A tiny MIAL world whose rules are rewritten by the minds that live in it",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "embed": "node tools/embed_world.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
+  }
+}

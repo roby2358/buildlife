@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BuildLife</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <h1 class="title">BuildLife</h1>
+    <div class="controls">
+      <button id="playBtn" class="btn btn-primary" title="Start or pause the world">▶ Play</button>
+      <button id="stepBtn" class="btn" title="Advance one tick (while paused)">Step</button>
+      <button id="newGameBtn" class="btn" title="Restart the world from the current rules">New game</button>
+      <button id="downloadBtn" class="btn" title="Download the current world MIAL">Download MIAL</button>
+      <button id="settingsBtn" class="btn" title="API keys and call gaps">Settings</button>
+      <button id="resetBtn" class="btn btn-danger" title="Restore the default world and clear everything">Factory reset</button>
+    </div>
+    <div id="counters" class="counters" aria-live="polite"></div>
+  </header>
+
+  <main class="layout">
+    <section class="world-pane box">
+      <div class="world-head">
+        <span id="worldStatus" class="status"></span>
+        <span id="slowBadge" class="badge badge-slow" hidden>half speed</span>
+        <span id="haltBadge" class="badge badge-halt" hidden>halted</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="world" width="600" height="600" aria-label="The world"></canvas>
+      </div>
+      <div id="meters" class="meters"></div>
+      <div id="warnings" class="warnings" hidden></div>
+    </section>
+
+    <section class="side-pane box">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" data-tab="chat" role="tab">Chat</button>
+        <button class="tab" data-tab="edits" role="tab">Edits <span id="editCount" class="count"></span></button>
+      </nav>
+      <div id="chatPanel" class="panel active">
+        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+        <form id="chatForm" class="chat-form">
+          <input id="chatInput" type="text" placeholder="Say something to the inhabitant…" autocomplete="off">
+          <button class="btn btn-primary" type="submit">Send</button>
+        </form>
+      </div>
+      <div id="editsPanel" class="panel">
+        <ol id="editList" class="edit-list" reversed></ol>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog" class="dialog">
+    <form method="dialog" id="settingsForm">
+      <h2>Settings</h2>
+      <label>Anthropic API key (Sonnet)
+        <input id="anthropicKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+      </label>
+      <label>OpenRouter API key (Jev)
+        <input id="openrouterKey" type="password" autocomplete="off" placeholder="sk-or-…">
+      </label>
+      <div class="row">
+        <label>Min gap between Jev calls (s)
+          <input id="jevGap" type="number" min="0" step="0.5">
+        </label>
+        <label>Min gap between Sonnet calls (s)
+          <input id="sonnetGap" type="number" min="0" step="1">
+        </label>
+      </div>
+      <p class="hint">Keys are stored in this browser's localStorage only, and are never included in saves or downloads.</p>
+      <div class="dialog-actions">
+        <button value="cancel" class="btn">Cancel</button>
+        <button value="save" id="settingsSave" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="js/mial.js"></script>
+  <script src="js/world_default.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/minds.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/fake_api.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

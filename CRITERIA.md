@@ -1,0 +1,63 @@
+# CRITERIA.md — BuildLife
+
+How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule name and stable ID, never by section number. An `automated` R-row owns `test/R-n/`.
+
+## R — Rules (automated)
+
+| ID | Given | Expect | Instrument |
+|---|---|---|---|
+| R-1 | The interpreter copy with host built-ins | `record`/`get`/`put`/`has?`/`keys` round-trip. `put` doesn't mutate its input. `text` joins with newlines. `let` evaluates its bindings in order. `map`/`filter`/`reduce` call closures | automated |
+| R-2 | An entry-point call that recurses forever or loops deeply | Returns a MIAL error (step budget or stack overflow), never hangs or throws out of `world.js` | automated |
+| R-3 | The default world, one tick | Every meter drops by its DECAY and is floored at 0. `low` is emitted only on the tick a meter crosses LOW_THRESHOLD | automated |
+| R-4 | The default world, one meter below LOW_THRESHOLD vs. none, and two meters below vs. one | Speed is BASE_SPEED × SLOW_FACTOR when any meter is low, and the factor is applied only once | automated |
+| R-5 | Inhabitant with goal `well` at a distance | It reaches the tile next to the well in ceil(distance / speed) ticks, ± 1. `arrived` fires once and status becomes `using` | automated |
+| R-6 | Using a structure | Its meter rises by rate − DECAY per tick. When it reaches METER_MAX: `full`, status `idle`, goal `idle` | automated |
+| R-7 | `apply-action` with each action in `actions` | Goal and status are set by the action rule. Neither `actions` nor `apply-action` emits an event | automated |
+| R-8 | Default cadence | `jev-trigger?` is true on full/low/recovered/idle events or when idle. `sonnet-trigger?` is true when since ≥ SONNET_EVERY_N_JEV | automated |
+| R-9 | Same source, same state, same action sequence, run twice | Identical states (determinism) | automated |
+| R-10 | `applyEdit` with a replacing def, a new def, a delete, and a source that doesn't parse | Replace, append, and remove work, and each adds one entry to the version, log, and chat. A source that doesn't parse changes nothing and returns diagnostics | automated |
+| R-11 | An edit that breaks `tick` (a runtime error, a missing definition, the wrong return type) | Ticking pauses and the repair call starts with CORE_REPAIR_PROMPT. After REPAIR_MAX consecutive failures the world is halted. One good tick resets the streak | automated |
+| R-12 | Jev reply with an action not in `actions`, or JSON that doesn't parse | Error goes to chat, state is unchanged | automated |
+| R-13 | Triggers firing while a call is in flight, or inside the min gap | No second request. The trigger is dropped, except for one pending user turn | automated |
+| R-14 | Built requests (headless, with fake fetch) | Jev: system/user come from the MIAL defs and the schema enum equals `actions`. Sonnet: system holds sonnet-system, CORE_PREAMBLE, and the full source, the reply format is the structured-output schema, and no forced tool is sent. An edit to sonnet-system can't remove CORE_PREAMBLE | automated |
+| R-15 | Save, then load | State, source, versions, edit log, chat, counters, and halted are all restored. Keys aren't in the save blob or the download | automated |
+| R-16 | A WorldState missing render-contract fields, or with odd types | The render-data extractor returns partial data plus warnings, never throws | automated |
+| R-17 | `revertTo(v)` | Source equals snapshot v and becomes a new version with the comment "revert to vN". `halted` is cleared | automated |
+
+## U — UI / readability
+
+Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:// URL). It writes screenshots to `test/screenshots/`.
+
+| ID | Criterion | Instrument |
+|---|---|---|
+| U-1 | Double-clicking `index.html` (file://) loads with no console errors and no server | automated |
+| U-2 | The world canvas and the chat sit side by side and each takes a usable share of a 1280px-wide window | automated |
+| U-3 | Each meter has a labelled bar, and a meter below the threshold looks distinct. Half speed is visible (a "slow" badge) | automated |
+| U-4 | Each chat kind (user, inhabitant, jev, sonnet-thought, edit, core-request, error, system) is visually distinct. Core requests are highlighted | automated |
+| U-5 | The edit list shows version, author, time, comment, and the names touched, with no diff | automated |
+| U-6 | The toolbar has play/pause/step, new game, download MIAL, settings (keys), factory reset, and call counters | automated |
+| U-7 | Structures the models add appear on the canvas as generic labelled shapes | automated |
+
+## X — Experience
+
+| ID | Criterion | Linked decision |
+|---|---|---|
+| X-1 | With default settings, the inhabitant stays mostly above the threshold. Fails if it spends most of a 15-minute session at half speed | D-10 |
+| X-2 | Within 30 minutes of play, Sonnet makes at least one edit that changes behavior you can observe. Fails if most of 3 sessions have none | D-7, G-1 |
+| X-3 | When Sonnet's edit breaks the world, it's repaired without you. Fails if most breakages end halted | D-8 |
+| X-4 | A 30-minute session costs no more than you're comfortable spending (measure dollars per session with the counters) | D-12 |
+| X-5 | You can explain any action the inhabitant took from the chat alone | G-4 |
+
+## Status
+
+2026-10-31. `npm test` covers R-1 to R-17, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-7. Both pass.
+
+**X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
+
+**Partial coverage, honestly:**
+- R-4 checks the `speed` definition directly. It doesn't check that `move` uses it (R-5 covers movement only at full speed).
+- R-11 covers a runtime error, a missing definition, and a wrong return type in `tick`. Step-budget and stack-overflow errors reach repair through the same path, but no test drives them through the game.
+- R-13 checks the Jev gap and the in-flight rule for Jev, and the Sonnet gap through user messages. It doesn't check a Sonnet trigger from `sonnet-trigger?` firing inside the gap.
+- R-15 compares one counter (`jevCalls`). It doesn't check that a download excludes keys; downloads contain only the world source, by construction.
+- U-1 runs in Chromium only. Firefox and Safari on file:// are unchecked.
+- The real network path (`js/api.js`: CORS from file://, headers, the fallbacks beta) has no automated check. The first real-key session is the test.
