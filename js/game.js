@@ -12,7 +12,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const listeners = [];
   const emit = (type, payload) => listeners.forEach(fn => fn(type, payload));
 
-  const freshCounters = () => ({ jevCalls: 0, sonnetCalls: 0, jevSinceSonnet: 0, repairStreak: 0, lastJevAt: -Infinity, lastSonnetAt: -Infinity });
+  const freshCounters = () => ({ ticks: 0, jevCalls: 0, jevDecisions: 0, jevInvalid: 0, jevRetries: 0, sonnetCalls: 0, repairs: 0, jevSinceSonnet: 0, repairStreak: 0, lastJevAt: -Infinity, lastSonnetAt: -Infinity });
 
   const g = {
     source: '',
@@ -94,6 +94,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       return;
     }
     g.counters.repairStreak += 1;
+    g.counters.repairs += 1;
     g.repairing = true;
     startRepair(r);
   };
@@ -142,36 +143,52 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const maybeCallJev = () => {
     if (g.inFlight.jev || now() - g.counters.lastJevAt < g.settings.jevGapMs) return false;
     if (needsKey('jev')) return false;
-    const req = minds.buildJev(g.loaded, g.state, g.eventHistory);
-    if (!req.ok) { mialError(req); return false; }
     g.inFlight.jev = true;
-    g.counters.lastJevAt = now();
-    g.counters.jevCalls += 1;
     emit('changed');
-    api.jev(req.body)
-      .then(handleJevReply)
+    requestJev(false)
       .catch(err => apiError('jev', err))
       .finally(() => { g.inFlight.jev = false; emit('changed'); });
     return true;
   };
 
+  // One Jev request. A retry is built from the current state and skips the gap: it
+  // stands in for the same decision. The in-flight flag covers both attempts.
+  const requestJev = (isRetry) => {
+    const req = minds.buildJev(g.loaded, g.state, g.eventHistory);
+    if (!req.ok) { mialError(req); return Promise.resolve(); }
+    g.counters.lastJevAt = now();
+    g.counters.jevCalls += 1;
+    return api.jev(req.body).then(resp => handleJevReply(resp, isRetry));
+  };
+
   // Applied to the state as it is when the reply arrives.
-  const handleJevReply = (resp) => {
-    if (g.halted || g.repairing) return;
+  const handleJevReply = (resp, isRetry) => {
+    if (g.halted || g.repairing) return undefined;
     const acts = W.actions(g.loaded, g.state);
-    if (!acts.ok) { mialError(acts); return; }
+    if (!acts.ok) { mialError(acts); return undefined; }
     const parsed = minds.parseJev(resp, acts.value);
-    if (!parsed.ok) { addChat('error', parsed.error); return; }
+    if (!parsed.ok) {
+      g.counters.jevInvalid += 1;
+      if (parsed.retryable && !isRetry) {
+        g.counters.jevRetries += 1;
+        addChat('system', `${parsed.error}. Retrying once.`);
+        return requestJev(true);
+      }
+      addChat('error', parsed.error);
+      return undefined;
+    }
     const next = W.applyAction(g.loaded, g.state, parsed.action);
-    if (!next.ok) { mialError(next); return; }
+    if (!next.ok) { mialError(next); return undefined; }
     g.state = next.value;
     pushHistory([{ type: 'decision', action: parsed.action, thought: parsed.thought }]);
     addChat('jev', `→ ${parsed.action}${parsed.thought ? ` · ${parsed.thought}` : ''}`);
     emit('jev-decision', parsed);
     g.counters.jevSinceSonnet += 1;
+    g.counters.jevDecisions += 1;
     const trig = W.sonnetTrigger(g.loaded, g.state, W.eventsNode(g.state), g.counters.jevSinceSonnet);
-    if (!trig.ok) { mialError(trig); return; }
+    if (!trig.ok) { mialError(trig); return undefined; }
     if (trig.value) maybeCallSonnet();
+    return undefined;
   };
 
   // --- Sonnet call rule ------------------------------------------------------
@@ -214,6 +231,18 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
 
   // --- Commands ----------------------------------------------------------
 
+  const coreStats = () => ({
+    ticks: g.counters.ticks,
+    'jev-decisions': g.counters.jevDecisions,
+    'jev-invalid': g.counters.jevInvalid,
+    'jev-retries': g.counters.jevRetries,
+    'sonnet-calls': g.counters.sonnetCalls,
+    repairs: g.counters.repairs,
+    'sonnet-edits': g.editLog.filter(e => e.author === 'sonnet').length,
+    'world-version': g.version,
+  });
+  const stampCore = (state) => W.withCoreStats(state, coreStats());
+
   const tickOnce = () => {
     if (g.halted) return { ok: false, reason: 'halted' };
     if (g.repairing) return { ok: false, reason: 'repairing' };
@@ -223,9 +252,12 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       if (!init.ok) { mialError(init); return { ok: false, reason: 'mial-error' }; }
       g.state = init.value;
     }
-    const r = W.tick(g.loaded, g.state);
+    // state.core is stamped before the tick (so world code can read it) and after
+    // (so prompts see it even if the tick dropped it).
+    const r = W.tick(g.loaded, stampCore(g.state));
     if (!r.ok) { mialError(r); return { ok: false, reason: 'mial-error' }; }
-    g.state = r.value;
+    g.counters.ticks += 1;
+    g.state = stampCore(r.value);
     const events = W.eventsOf(g.state);
     pushHistory(events);
     for (const e of events) {
@@ -372,6 +404,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     getCounters: () => ({ ...g.counters, inFlight: { ...g.inFlight } }),
     getSettings: () => ({ ...g.settings }),
     getEventHistory: () => g.eventHistory,
+    getStatsData: () => W.statsData(g.state),
     getRenderData: () => W.renderData(g.state, g.loaded ? W.lowThreshold(g.loaded) : undefined),
     isHalted: () => g.halted,
     isRunning: () => g.running,

@@ -73,16 +73,40 @@
     $('warnings').textContent = data.warnings.length ? `Can't fully draw the state: ${data.warnings.join('; ')}` : '';
   };
 
+  // Stats dialog: rebuilt on open and on every tick while open.
+  const renderStats = () => {
+    const { core, world } = game.getStatsData();
+    const section = (title, obj) => {
+      const h = document.createElement('h3');
+      h.textContent = title;
+      const table = document.createElement('table');
+      for (const [k, v] of Object.entries(obj)) {
+        const tr = table.insertRow();
+        tr.insertCell().textContent = k;
+        tr.insertCell().textContent = Number.isInteger(v) ? v : v.toFixed(1);
+      }
+      return [h, table];
+    };
+    const parts = [];
+    if (core) parts.push(...section('Core', core));
+    for (const [name, obj] of Object.entries(world)) parts.push(...section(`World: ${name}`, obj));
+    if (!parts.length) parts.push(Object.assign(document.createElement('p'), { className: 'hint', textContent: 'No stats yet. Run a tick.' }));
+    $('statsBody').replaceChildren(...parts);
+  };
+
   let latest; // the render data the draw loop shows; refreshed on ticks and decisions
   game.on((type, payload) => {
     if (type === 'chat') chat.appendMessage(payload);
     if (type === 'edit-applied') renderEdits();
     if (type === 'ticked' || type === 'jev-decision') latest = game.getRenderData();
+    if (type === 'ticked' && $('statsDialog').open) renderStats();
     updateControls();
   });
 
   game.boot();
-  game.setSettings(store.loadSettings());
+  const savedSettings = store.loadSettings();
+  game.setSettings(savedSettings);
+  BL.logApi = savedSettings.logApi !== false;
   chat.renderChat(game.getChat());
   renderEdits();
   latest = game.getRenderData();
@@ -131,12 +155,18 @@
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `${tab.dataset.tab}Panel`));
   }));
 
+  $('statsBtn').addEventListener('click', () => {
+    renderStats();
+    $('statsDialog').showModal();
+  });
+
   $('settingsBtn').addEventListener('click', () => {
     const s = game.getSettings();
     $('anthropicKey').value = keys.anthropic;
     $('openrouterKey').value = keys.openrouter;
     $('jevGap').value = s.jevGapMs / 1000;
     $('sonnetGap').value = s.sonnetGapMs / 1000;
+    $('logApi').checked = BL.logApi;
     $('settingsDialog').showModal();
   });
   $('settingsDialog').addEventListener('close', () => {
@@ -144,7 +174,8 @@
     keys = { anthropic: $('anthropicKey').value.trim(), openrouter: $('openrouterKey').value.trim() };
     store.saveKeys(keys);
     const settings = { jevGapMs: Number($('jevGap').value) * 1000, sonnetGapMs: Number($('sonnetGap').value) * 1000 };
-    if (game.setSettings(settings).ok) store.saveSettings(settings);
+    BL.logApi = $('logApi').checked;
+    if (game.setSettings(settings).ok) store.saveSettings({ ...settings, logApi: BL.logApi });
     updateControls();
   });
 

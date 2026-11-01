@@ -17,12 +17,14 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-9 | Same source, same state, same action sequence, run twice | Identical states (determinism) | automated |
 | R-10 | `applyEdit` with a replacing def, a new def, a delete, and a source that doesn't parse | Replace, append, and remove work, and each adds one entry to the version, log, and chat. A source that doesn't parse changes nothing and returns diagnostics | automated |
 | R-11 | An edit that breaks `tick` (a runtime error, a missing definition, the wrong return type) | Ticking pauses and the repair call starts with CORE_REPAIR_PROMPT. After REPAIR_MAX consecutive failures the world is halted. One good tick resets the streak | automated |
-| R-12 | Jev reply with an action not in `actions`, or JSON that doesn't parse | Error goes to chat, state is unchanged | automated |
+| R-12 | Jev reply with an action not in `actions`, or JSON that doesn't parse or is cut off | Bad JSON is retried once (built from the current state, inside the same in-flight slot). A second failure, or an unknown action, goes to chat as an error with the state unchanged. No third attempt | automated |
 | R-13 | Triggers firing while a call is in flight, or inside the min gap | No second request. The trigger is dropped, except for one pending user turn | automated |
 | R-14 | Built requests (headless, with fake fetch) | Jev: system/user come from the MIAL defs and the schema enum equals `actions`. Sonnet: system holds sonnet-system, CORE_PREAMBLE, and the full source, the reply format is the structured-output schema, and no forced tool is sent. An edit to sonnet-system can't remove CORE_PREAMBLE | automated |
 | R-15 | Save, then load | State, source, versions, edit log, chat, counters, and halted are all restored. Keys aren't in the save blob or the download | automated |
 | R-16 | A WorldState missing render-contract fields, or with odd types | The render-data extractor returns partial data plus warnings, never throws | automated |
 | R-17 | `revertTo(v)` | Source equals snapshot v and becomes a new version with the comment "revert to vN". `halted` is cleared | automated |
+| R-18 | Ticks, Jev decisions, an invalid reply and its retry; a tick that reads and scribbles on `state.core` | `state.core` holds the core's counts after each tick. World code sees the record as it stood before the tick, and anything it writes to `core` is overwritten | automated |
+| R-19 | Default world with some meters below LOW_THRESHOLD; a state with no `low-ticks` record | `low-ticks` counts one per tick for each meter below LOW_THRESHOLD, starting from zero (or from nothing for an older state) | automated |
 
 ## U — UI / readability
 
@@ -37,6 +39,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 | U-5 | The edit list shows version, author, time, comment, and the names touched, with no diff | automated |
 | U-6 | The toolbar has play/pause/step, new game, download MIAL, settings (keys), factory reset, and call counters | automated |
 | U-7 | Structures the models add appear on the canvas as generic labelled shapes | automated |
+| U-8 | The Stats button opens a dialog showing the core stats and each world stats record | automated |
 
 ## X — Experience
 
@@ -50,7 +53,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 
 ## Status
 
-2026-10-31. `npm test` covers R-1 to R-17, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-7. Both pass.
+2026-10-31. `npm test` covers R-1 to R-19, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
 
 **X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
 

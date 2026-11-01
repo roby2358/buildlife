@@ -166,5 +166,30 @@ BL.world = (() => {
     return r.ok && typeof r.value.value === 'number' ? r.value.value : undefined;
   };
 
-  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold };
+  // The reserved `core` field: facts only the core knows, overwritten by the core every tick.
+  // Always the last field, so the volatile numbers sit at the end of anything that renders
+  // the state into a prompt. Any other state shape passes through untouched (the repair rule
+  // deals with non-records).
+  const withCoreStats = (state, stats) => {
+    if (!M.isRecord(state)) return state;
+    const rest = state.children.filter(f => f.value !== 'core');
+    return M.node('record', [...rest, M.node('core', [M.fromJS(stats)])]);
+  };
+
+  // For the Stats dialog: the core record plus every top-level record of plain numbers the
+  // world keeps (e.g. low-ticks, or stats the models invent). Never throws.
+  const statsData = (state) => {
+    const out = { core: null, world: {} };
+    if (!M.isRecord(state)) return out;
+    for (const f of state.children) {
+      const v = M.toJS(f.children[0]);
+      const numeric = v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length > 0 &&
+        Object.values(v).every(x => typeof x === 'number');
+      if (f.value === 'core') out.core = numeric ? v : null;
+      else if (numeric && !['grid', 'meters'].includes(f.value)) out.world[f.value] = v;
+    }
+    return out;
+  };
+
+  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, withCoreStats, statsData };
 })();

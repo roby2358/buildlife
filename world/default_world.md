@@ -59,6 +59,8 @@
   - record `"x"` `6` `"y"` `6` `"goal"` `"idle"` `"progress"` `0` `"status"` `"idle"`
   - `"meters"`
   - record `"food"` `80` `"water"` `80` `"rest"` `80` `"wood"` `80`
+  - `"low-ticks"`
+  - record `"food"` `0` `"water"` `0` `"rest"` `0` `"wood"` `0`
   - `"events"`
   - `null`
 
@@ -168,6 +170,29 @@
             - get new m
             - LOW_THRESHOLD
     - keys new
+
+# count-low
+- *
+  - counts
+  - meters
+- reduce
+  - lambda
+    - *
+      - acc
+      - m
+    - if
+      - <
+        - get meters m
+        - LOW_THRESHOLD
+      - put acc m
+        - +
+          - max
+            - `0`
+            - get acc m
+          - `1`
+      - acc
+  - counts
+  - keys meters
 
 # find-structure
 - *
@@ -369,7 +394,12 @@
       - act decayed
     - after
       - get acted `"meters"`
-  - put acted `"events"`
+  - put
+    - put acted `"low-ticks"`
+      - count-low
+        - get acted `"low-ticks"`
+        - after
+    - `"events"`
     - append
       - get acted `"events"`
       - crossings before after `"low"`

@@ -88,6 +88,14 @@ const check = (id, ok, detail) => {
   check('U-5', editItems >= 3 && /^v\d+ · \w+ · .+ · tick \d+$/.test(firstHead) && hasRevert > 0, `${editItems} edits, head "${firstHead}"`);
   await page.screenshot({ path: path.join(SHOTS, 'edits.png') });
 
+  await page.click('#statsBtn');
+  await page.waitForTimeout(100);
+  const statsTables = await page.locator('#statsBody table').count();
+  const statsText = await page.locator('#statsBody').textContent();
+  check('U-8', statsTables >= 2 && /jev-decisions/.test(statsText) && /low-ticks/.test(statsText), `stats dialog shows ${statsTables} tables (core and world)`);
+  await page.screenshot({ path: path.join(SHOTS, 'stats.png') });
+  await page.keyboard.press('Escape');
+
   await page.click('#settingsBtn');
   await page.waitForTimeout(100);
   await page.screenshot({ path: path.join(SHOTS, 'settings.png') });

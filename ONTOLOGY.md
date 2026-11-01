@@ -71,9 +71,25 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | inhabitant | Inhabitant | |
 | meters | Record, name → number | Starts as `food water rest wood`. **Render contract:** every key gets a bar |
 | events | list of Event | **This tick's** events only. `tick` replaces the list each call |
+| low-ticks | Record, meter → number | In the default world: ticks each meter has spent below `LOW_THRESHOLD` (the low-ticks rule). World-owned, so it follows the world's rules |
+| core | CoreStats | **Reserved, core-owned, always the last field.** Written by the core before and after every tick; anything the MIAL writes there is overwritten [D] |
 | *(anything else)* | any | Room for the models to invent new state |
 
 **Render contract** [P]: `grid.w`, `grid.h`, `structures[].name/x/y`, `inhabitant.x/y/goal`, `meters.*`. JS reads these with the same `get` built-in. A missing field is skipped and shows a warning badge, so it never crashes the page.
+
+### 1.3a CoreStats [D]
+*Serves:* G-1, G-4. These are facts only the core knows, so a reflection can judge changes by numbers. The inhabitant asked for this through a core request. World facts (such as time spent low) are deliberately not here, because what counts as "low" is a world rule (D-29).
+
+| Field | Type | Notes |
+|---|---|---|
+| ticks | number | Ticks run by the core since the counters started |
+| jev-decisions | number | Jev decisions applied |
+| jev-invalid | number | Jev replies that were malformed or cut off |
+| jev-retries | number | Retries sent after a malformed reply |
+| sonnet-calls | number | Sonnet calls, reflections and repairs alike |
+| repairs | number | Repair attempts |
+| sonnet-edits | number | Applied edits authored by Sonnet |
+| world-version | number | Current WorldSource version |
 
 ### 1.4 Structure [P]
 *Serves:* G-1. It's a template: the bush, shack, well, and tree are all the same shape.
@@ -141,6 +157,7 @@ The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versio
 ## §2 Relations and invariants
 
 - **Core JS never encodes a world rule** [D]. Decay, movement, refilling, slowdown, which actions exist, and when the models are called are all decided by MIAL. JS only renders, stores, schedules, and calls.
+- **The core writes exactly one field of the state, `core`, and always as the last field** [D]. Everything else in the state belongs to the MIAL. Keeping the volatile numbers last means a prompt that renders the state puts them at the end.
 - **MIAL never performs I/O** [P]. Every entry point is a pure function of its arguments and returns a value. `print` goes to the browser console.
 - **Same source + same state + same action sequence → same state** [P]. The default MIAL uses no randomness. Any later randomness has to come from a seeded host built-in.
 - **Only one call per model is in flight at a time** [P]. A trigger that fires while a call is in flight is dropped, not queued.
@@ -158,7 +175,7 @@ Plain `<script>` tags that load in order and share one global namespace, `BL` [D
 
 | File | Role | Editable by models |
 |---|---|---|
-| `index.html` | Layout: canvas on the left, chat/edits tabs on the right, toolbar | no |
+| `index.html` | Layout: canvas on the left, chat/edits tabs on the right, toolbar, Settings and Stats dialogs | no |
 | `css/style.css` | | no |
 | `js/mial.js` | Copy of the MIAL interpreter plus host built-ins and an evaluation step budget | no |
 | `world/default_world.md` | The starting world MIAL, the factory reset point | no |
@@ -167,7 +184,7 @@ Plain `<script>` tags that load in order and share one global namespace, `BL` [D
 | `js/store.js` | localStorage save/load, keys, settings | no |
 | `js/game.js` | The core controller: tick loop, triggers, call gating, edits, versions, repair, persistence. Headless (store, API and clock injected) | no |
 | `js/world.js` | Loads the source and calls the MIAL entry points. Headless, no DOM | no |
-| `js/api.js` | Calls to Anthropic and OpenRouter (plain `fetch`) | no |
+| `js/api.js` | Calls to Anthropic and OpenRouter (plain `fetch`). Logs each exchange (request body, response or error, time) as a collapsed console group while `BL.logApi` is on, a Settings checkbox stored with the settings (default on). Headers and keys are never logged | no |
 | `js/fake_api.js` | Stand-in minds for `?fake` in the URL: no keys, in-memory storage. Used by the browser test | no |
 | `js/minds.js` | Builds Jev, Sonnet and repair requests and parses replies. Holds `CORE_PREAMBLE` and `CORE_REPAIR_PROMPT` | no |
 | `js/render.js` | Canvas drawing | no |
@@ -275,11 +292,18 @@ jev-trigger?(state, events)  = any event in events has type in {full, low, recov
 sonnet-trigger?(state, events, since) = since >= SONNET_EVERY_N_JEV
 ```
 
+### 4.6a Low-ticks *(MIAL)* [D]
+*Serves:* G-4 (judging changes by numbers).
+```
+each tick, after acting: for each meter m below LOW_THRESHOLD: low-ticks[m] += 1
+# a state without the record (an older save) starts counting from nothing
+```
+
 ### 4.7 Tick loop *(core)* [P]
 *Serves:* G-3, the alive quality.
 ```
 every TICK_MS while running and not halted:
-  state = call tick(state)                       # MIAL error → repair rule
+  state = stamp-core(call tick(stamp-core(state)))  # MIAL error → repair rule
   eventHistory.push(state.events) (keep EVENT_HISTORY_N)
   repairStreak = 0                               # the tick and the trigger both succeeded
   if call jev-trigger?(state, state.events) and jev idle and now - lastJevAt >= JEV_MIN_GAP_MS:
@@ -294,7 +318,11 @@ every TICK_MS while running and not halted:
 acts = call actions(state)
 request: system = jev-system(), user = jev-prompt(state, history),
          response_format = json_schema {thought: string, action: enum acts}
-on reply: if action ∉ call actions(state): chat error, no change
+on reply: if the JSON is malformed or cut off and this is the first attempt:
+            jev-invalid += 1; jev-retries += 1; chat system; resend, built from the current state
+            (no gap check; the in-flight slot covers both attempts)
+          if malformed again: jev-invalid += 1; chat error, no change; no third attempt
+          if action ∉ call actions(state): chat error, no change (not retried)
           else state = call apply-action(state, action); chat jev{thought, action}
           jevSinceSonnet += 1
           if call sonnet-trigger?(state, lastEvents, jevSinceSonnet): request Sonnet call
@@ -441,7 +469,7 @@ Every command checks that it's legal. An illegal command returns `{ok:false, rea
 Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it saves `world-v<version>.md`.
 
 ### Read-only queries
-`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
+`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
 
 ### Events (core → UI)
 
@@ -459,4 +487,4 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 | `changed` | — | Toolbar, counters and status refresh |
 
 ### Client contract
-The UI calls only commands and queries and listens to events. It never calls MIAL entry points directly and never writes to `state`.
+The UI calls only commands and queries and listens to events. It never calls MIAL entry points directly and never writes to `state`. The Stats button shows `getStatsData()` and refreshes on each tick while it's open.

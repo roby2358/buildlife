@@ -2,6 +2,17 @@
 
 Newest first.
 
+### 2026-11-01: Jev retry and stats (from the inhabitant's core request)
+- A malformed or cut-off Jev reply is now retried once (D-28). R-12 was reworded. A `jev-invalid` counter was added.
+- New reserved `state.core` record of core facts, stamped before and after every tick and always the last field (D-29, D-30, R-18).
+- The default world's `tick` keeps `low-ticks` per meter (R-19). The world-side half of the request stays out of the core because "low" is a world rule.
+- `CORE_PREAMBLE` now describes `state.core`. It says the field is read-only, and that world stats belong in the MIAL.
+- New Stats button and dialog (`getStatsData()`, U-8).
+- Live worlds keep their own source, so an existing world gets `state.core` right away but `low-ticks` only if Sonnet adds it, or after a factory reset or a revert to v1.
+
+### 2026-10-31: Console logging of API exchanges
+Each Jev and Sonnet exchange, real or fake, is logged to the browser console as a collapsed group: the request body, then the response or the error, with the time taken. A Settings checkbox controls it; it's on by default and stored with the other settings. Headers are never logged, so keys stay out of the console.
+
 ### 2026-10-31: First implementation
 Built the core (`js/`), the default world (`world/default_world.md`, embedded by `tools/embed_world.js`), tests for R-1 to R-17 (`test/R-n/`, plus a coverage test), the browser check for U-1 to U-7 (`test/browser.js`), and the soak harness (`tools/tune.js`). Changes from the docs as first written:
 - Sonnet replies through structured output (`output_config.format`), not a forced `act` tool. Sonnet 5.5 rejects forced `tool_choice` with a 400 (D-17). Added `fallbacks: "default"` and prompt caching of the system block. R-14 was reworded to match.

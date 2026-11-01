@@ -6,10 +6,10 @@ BL.createRenderer = (canvas) => {
   const shown = { x: null, y: null }; // the inhabitant's drawn position, eased toward its tile
 
   const COLORS = {
-    ground: '#1f2a1f', grid: '#273427', label: '#c9d1c9',
-    leaf: '#4fae5a', berry: '#e2506a', water: '#4a9be8', stone: '#8a8f99',
+    ground: '#6aa84f', grid: '#5f9a46', label: '#16260f',
+    leaf: '#2f6e30', berry: '#e2506a', water: '#4a9be8', stone: '#8a8f99',
     wood: '#8a5a32', roof: '#b0533c', trunk: '#6b4423', other: '#7d8590',
-    body: '#ffb347', eye: '#1c1f26', goal: 'rgba(255, 210, 122, 0.5)',
+    body: '#ffb347', eye: '#1c1f26', goal: 'rgba(255, 255, 255, 0.65)',
   };
 
   const circle = (x, y, r, color) => {

@@ -103,6 +103,17 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-27 `?fake` runs the page with stand-in minds and in-memory storage — *Proposed*
 - **Why:** You can try the page without keys, and the browser test can walk every chat kind deterministically. In-memory storage means a fake session never overwrites a real save.
 
+### D-28 Retry a malformed or cut-off Jev reply once — *Decided*
+- **Alternatives:** no retry (the original rule), which costs a decision; retry until valid, which loops on a persistent fault; raising JEV_MAX_TOKENS instead (the error now says when a reply was cut off at the limit, so that can be judged from evidence).
+- **Why:** The inhabitant asked for it after losing a decision. One retry recovers transient faults, and a second failure is reported, never looped. An unknown action isn't retried, because the schema enum makes it a model error, not noise.
+
+### D-29 Stats are split by who knows them: core facts in `state.core`, world facts in MIAL — *Decided*
+- **Alternatives:** the core also counts ticks below LOW_THRESHOLD by reading the MIAL constant; only core facts, leaving world stats entirely to Sonnet.
+- **Why:** "Below the threshold" is a world rule, and the core never encodes world rules (§2). If the core counted it, the number would silently go wrong the moment Sonnet redefined "low." So the core reports what only it can see (decisions, invalid replies, retries, calls, repairs, edits). The default world shows the world-side half with a `low-ticks` record, and the core preamble tells Sonnet that world stats belong in its MIAL.
+
+### D-30 `state.core` is always the last field — *Decided*
+- **Why:** Volatile numbers go at the end of anything that renders the state into a prompt. Today it doesn't affect caching: the only cache breakpoint is the end of Sonnet's system block, and the state sits after it in the user message. It keeps the rule easy to follow, and it starts to matter if part of the state is ever cached.
+
 ### D-7 Event-driven cadence, defined in MIAL — *Decided (event-driven) / Proposed (specific triggers and numbers)*
 - **Why:** G-2 and cost. Jev is asked when something happens. Sonnet is asked every SONNET_EVERY_N_JEV decisions or when you talk. Sonnet can retune all of it.
 

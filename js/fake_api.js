@@ -5,7 +5,10 @@ var BL = window.BL = window.BL || {};
 
 BL.createFakeApi = () => {
   let sonnetCalls = 0;
-  const delay = (value) => new Promise(resolve => setTimeout(() => resolve(value), 300));
+  const delay = (label, body, value) => new Promise(resolve => setTimeout(() => {
+    BL.logExchange(`${label} (fake)`, body, value, 300);
+    resolve(value);
+  }, 300));
 
   const lowestNeed = (prompt, actions) => {
     const meters = [...prompt.matchAll(/(\w+): (\d+)/g)].map(m => [m[1], Number(m[2])]);
@@ -19,7 +22,7 @@ BL.createFakeApi = () => {
     jev: (body) => {
       const actions = body.response_format.json_schema.schema.properties.action.enum;
       const action = lowestNeed(body.messages[1].content, actions);
-      return delay({ choices: [{ message: { content: JSON.stringify({ thought: `(fake) my ${action} need is calling`, action }) } }] });
+      return delay('Jev', body, { choices: [{ message: { content: JSON.stringify({ thought: `(fake) my ${action} need is calling`, action }) } }] });
     },
     sonnet: (body) => {
       sonnetCalls += 1;
@@ -29,7 +32,7 @@ BL.createFakeApi = () => {
         edits: sonnetCalls === 1 ? [{ comment: 'keep a notes definition', source: '# notes\n- `"I live near a well."`\n', delete: [] }] : [],
         core_request: sonnetCalls === 2 ? '(fake) Could the canvas show a little sun that moves with the ticks?' : '',
       };
-      return delay({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
+      return delay('Sonnet', body, { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
     },
   };
 };

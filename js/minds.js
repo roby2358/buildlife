@@ -36,7 +36,8 @@ The core calls these definitions (keep their names and parameters, or the world 
 | sonnet-prompt | state, history | your own prompt (string) |
 | sonnet-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
 
-The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent.
+The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, jev-decisions, jev-invalid, jev-retries, sonnet-calls, repairs, sonnet-edits, world-version). Anything you write there is overwritten.
+Keep statistics about the world itself in your own MIAL, for example a record counting the ticks each need spends below the low threshold, so they follow your rules if you change them.
 The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every few seconds or you more often than every few seconds, whatever your triggers say.
 
 ## How to reply
@@ -118,9 +119,14 @@ Your only job is to make it load and tick again with as little change as possibl
   };
 
   const parseJev = (resp, actions) => {
-    const content = resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content;
+    const choice = resp && resp.choices && resp.choices[0];
+    const content = choice && choice.message && choice.message.content;
     const data = parseJSON(content);
-    if (!data || typeof data.action !== 'string') return { ok: false, error: `Jev's reply was not a valid JSON decision: ${String(content).slice(0, 200)}` };
+    if (!data || typeof data.action !== 'string') {
+      const cutOff = choice && choice.finish_reason === 'length' ? ' (cut off at JEV_MAX_TOKENS)' : '';
+      // retryable: a malformed or truncated reply is worth one more try; a wrong action is not.
+      return { ok: false, retryable: true, error: `Jev's reply was not a valid JSON decision${cutOff}: ${String(content).slice(0, 200)}` };
+    }
     if (!actions.includes(data.action)) return { ok: false, error: `Jev chose "${data.action}", which is not one of: ${actions.join(', ')}` };
     return { ok: true, action: data.action, thought: typeof data.thought === 'string' ? data.thought : '' };
   };
