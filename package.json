@@ -1,6 +1,7 @@
 {
   "name": "buildlife",
   "private": true,
+  "license": "MIT",
   "description": "A tiny MIAL world whose rules are rewritten by the minds that live in it",
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
