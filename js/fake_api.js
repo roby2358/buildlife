@@ -27,7 +27,7 @@ BL.createFakeApi = () => {
     sonnet: (body) => {
       sonnetCalls += 1;
       const reply = {
-        thought: `(fake) reflection number ${sonnetCalls}.`,
+        summary: `(fake) reflection number ${sonnetCalls}.`,
         say: sonnetCalls === 1 ? 'Hello, neighbour! (I am the fake mind; add API keys in settings for the real ones.)' : '',
         edits: sonnetCalls === 1 ? [{ comment: 'keep a notes definition', source: '# notes\n- `"I live near a well."`\n', delete: [] }] : [],
         core_request: sonnetCalls === 2 ? '(fake) Could the canvas show a little sun that moves with the ticks?' : '',

@@ -25,6 +25,7 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-17 | `revertTo(v)` | Source equals snapshot v and becomes a new version with the comment "revert to vN". `halted` is cleared | automated |
 | R-18 | Ticks, Jev decisions, an invalid reply and its retry; a tick that reads and scribbles on `state.core` | `state.core` holds the core's counts after each tick. World code sees the record as it stood before the tick, and anything it writes to `core` is overwritten | automated |
 | R-19 | Default world with some meters below LOW_THRESHOLD; a state with no `low-ticks` record | `low-ticks` counts one per tick for each meter below LOW_THRESHOLD, starting from zero (or from nothing for an older state) | automated |
+| R-20 | Sonnet replies: a refusal with `stop_details`; a reply with a summary and summarized thinking blocks; the built request | A refusal goes to chat as an error naming its category and explanation, with no change. The summary and the thinking summary appear together as one Sonnet entry. Requests ask for `thinking: {adaptive, summarized}`, and neither the schema nor the core preamble asks for reasoning in the reply text | automated |
 
 ## U — UI / readability
 
@@ -53,7 +54,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 
 ## Status
 
-2026-10-31. `npm test` covers R-1 to R-19, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
+2026-10-31. `npm test` covers R-1 to R-20, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
 
 **X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
 

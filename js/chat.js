@@ -3,7 +3,7 @@ var BL = window.BL = window.BL || {};
 
 BL.createChatView = ({ log, editList, editCount, onRevert }) => {
   const LABELS = {
-    user: 'you', inhabitant: 'inhabitant', jev: 'Jev', 'sonnet-thought': 'Sonnet thinks',
+    user: 'you', inhabitant: 'inhabitant', jev: 'Jev', 'sonnet-thought': 'Sonnet',
     edit: 'world edit', 'core-request': 'core change request', error: 'error', system: 'system',
   };
 

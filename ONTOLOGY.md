@@ -340,13 +340,14 @@ allowed when: no Sonnet or repair call in flight, not repairing or halted,
 system = sonnet-system() + CORE_PREAMBLE + full WorldSource      # one block, prompt-cached
 user   = sonnet-prompt(state, history) + last CHAT_HISTORY_N chat entries
          (+ "the neighbour is waiting" when a user message is pending)
-output_config.format = json_schema {thought, say, edits[{comment, source, delete}], core_request}
+thinking = {adaptive, display: summarized}
+output_config.format = json_schema {summary, say, edits[{comment, source, delete}], core_request}
 on send:  jevSinceSonnet = 0; the waiting-user flag clears
-on reply: chat sonnet-thought; if say: chat inhabitant;
+on reply: chat sonnet-thought (summary, then the summarized thinking); if say: chat inhabitant;
           for each edit: apply-edit (author sonnet)
           if core_request: chat core-request (highlighted)
 ```
-`CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. Sonnet 5.5 rejects forced tool use, so the reply is a JSON object under structured output rather than a tool call. Requests carry `fallbacks: "default"`, so a refusal is re-run server-side on a fallback model. A remaining refusal, a truncated reply, or invalid JSON is a chat error with no change.
+`CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. Sonnet 5.5 rejects forced tool use, so the reply is a JSON object under structured output rather than a tool call. Requests carry `fallbacks: "default"`, so a refusal is re-run server-side on a fallback model. A remaining refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
 
 ### 4.10 Apply edit *(core)* [D: per definition, no validation]
 *Serves:* G-1, G-4.

@@ -33,7 +33,7 @@ test('REPAIR_MAX failed repairs halt the world', async () => {
   breakTick(game);
   for (let i = 0; i < BL.CONFIG.REPAIR_MAX; i++) {
     game.tickOnce();
-    api.calls.at(-1).resolve(sonnetReply({ thought: 'hmm' })); // repair that fixes nothing
+    api.calls.at(-1).resolve(sonnetReply({ summary: 'hmm' })); // repair that fixes nothing
     await flush();
   }
   assert.strictEqual(game.isHalted(), false);

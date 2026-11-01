@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-01: Fix reasoning_extraction refusals
+Live Sonnet calls were often refused with `stop_details.category: "reasoning_extraction"`. The reply schema's `thought` field asked for Sonnet's "private reflection … your thinking" in the response text. It was replaced by `summary` (what it noticed and decided), and requests now set `thinking: {type: "adaptive", display: "summarized"}`. The chat shows the summary plus the summarized thinking (D-31, R-20). Refusal errors now include the category and explanation.
+
 ### 2026-11-01: Jev retry and stats (from the inhabitant's core request)
 - A malformed or cut-off Jev reply is now retried once (D-28). R-12 was reworded. A `jev-invalid` counter was added.
 - New reserved `state.core` record of core facts, stamped before and after every tick and always the last field (D-29, D-30, R-18).

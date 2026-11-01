@@ -42,7 +42,7 @@ The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every fe
 
 ## How to reply
 Reply with one JSON object:
-- thought: your private reflection (shown to the neighbour as your thinking).
+- summary: one or two sentences on what you noticed and what you decided (shown to the neighbour).
 - say: what you say aloud to the neighbour, or "" for nothing.
 - edits: a list of world edits, each {comment, source, delete}. source is Markdown holding one or more complete "# name" definitions; each replaces the definition with that name or is added if new. delete lists definition names to remove. comment says why, like a commit message. Use [] for no edits.
 - core_request: a change you would like made to the core JavaScript (which you cannot edit), or "" for none.
@@ -54,7 +54,7 @@ Your only job is to make it load and tick again with as little change as possibl
   const SONNET_SCHEMA = {
     type: 'object',
     properties: {
-      thought: { type: 'string' },
+      summary: { type: 'string' },
       say: { type: 'string' },
       edits: {
         type: 'array',
@@ -71,7 +71,7 @@ Your only job is to make it load and tick again with as little change as possibl
       },
       core_request: { type: 'string' },
     },
-    required: ['thought', 'say', 'edits', 'core_request'],
+    required: ['summary', 'say', 'edits', 'core_request'],
     additionalProperties: false,
   };
 
@@ -134,9 +134,12 @@ Your only job is to make it load and tick again with as little change as possibl
   const chatLine = (e) => `[${e.kind}] ${e.text}`;
 
   // The system text changes only when the world is edited, so it is the cached prefix.
+  // Reasoning comes back as summarized thinking blocks. Asking for it in the reply text
+  // gets requests declined as reasoning_extraction (D-31).
   const sonnetBody = (system, user) => ({
     model: C.SONNET_MODEL,
     max_tokens: C.SONNET_MAX_TOKENS,
+    thinking: { type: 'adaptive', display: 'summarized' },
     fallbacks: 'default',
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: user }],
@@ -168,7 +171,10 @@ Your only job is to make it load and tick again with as little change as possibl
 
   const parseSonnet = (resp) => {
     if (!resp || !Array.isArray(resp.content)) return { ok: false, error: 'Sonnet returned no content' };
-    if (resp.stop_reason === 'refusal') return { ok: false, error: 'Sonnet declined this request (refusal)' };
+    if (resp.stop_reason === 'refusal') {
+      const d = resp.stop_details || {};
+      return { ok: false, error: `Sonnet declined this request (refusal${d.category ? `: ${d.category}` : ''})${d.explanation ? `. ${d.explanation}` : ''}` };
+    }
     if (resp.stop_reason === 'max_tokens') return { ok: false, error: 'Sonnet ran out of tokens before finishing its reply' };
     const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const data = parseJSON(text);
@@ -178,9 +184,11 @@ Your only job is to make it load and tick again with as little change as possibl
       source: String(e.source || ''),
       delete: Array.isArray(e.delete) ? e.delete.map(String) : [],
     })) : [];
+    const thinking = resp.content.filter(b => b.type === 'thinking' && b.thinking).map(b => b.thinking).join('\n\n');
     return {
       ok: true,
-      thought: String(data.thought || ''),
+      summary: String(data.summary || ''),
+      thinking,
       say: String(data.say || ''),
       edits,
       coreRequest: String(data.core_request || ''),

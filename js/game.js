@@ -218,9 +218,10 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const handleSonnetReply = (resp, author) => {
     const parsed = minds.parseSonnet(resp);
     if (!parsed.ok) { addChat('error', parsed.error); return; }
-    if (parsed.thought) addChat('sonnet-thought', parsed.thought);
+    const reflection = [parsed.summary, parsed.thinking && `Thinking: ${parsed.thinking}`].filter(Boolean).join('\n\n');
+    if (reflection) addChat('sonnet-thought', reflection);
     if (parsed.say) addChat('inhabitant', parsed.say);
-    emit('sonnet-reply', { thought: parsed.thought, say: parsed.say });
+    emit('sonnet-reply', { summary: parsed.summary, thinking: parsed.thinking, say: parsed.say });
     for (const edit of parsed.edits) applyEdit({ ...edit, author });
     if (parsed.coreRequest) {
       addChat('core-request', parsed.coreRequest);

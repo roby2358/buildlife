@@ -114,6 +114,12 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-30 `state.core` is always the last field — *Decided*
 - **Why:** Volatile numbers go at the end of anything that renders the state into a prompt. Today it doesn't affect caching: the only cache breakpoint is the end of Sonnet's system block, and the state sits after it in the user message. It keeps the rule easy to follow, and it starts to matter if part of the state is ever cached.
 
+### D-31 Sonnet's reasoning comes from summarized thinking blocks; the reply carries only a short summary — *Decided*
+- **Alternatives:** a `thought` field in the JSON reply holding its "private reflection", which is what the docs first used.
+- **Why:** Sonnet 5.5 declines requests that ask the model to reproduce its internal reasoning in the response text, under the `reasoning_extraction` category. Server-side fallback doesn't retry those.
+- **Evidence:** `Measured by:` a live session's console log. Refusals were frequent, and the response `msg_011CgbFMdgYXktba9SucKhcg` had `stop_details.category: "reasoning_extraction"`, on a request whose schema asked for `thought: your private reflection (shown to the neighbour as your thinking)`. The fix's effect on the refusal rate hasn't been measured yet.
+- G-4 legibility is kept: the chat shows the reply's `summary` plus the summarized thinking.
+
 ### D-7 Event-driven cadence, defined in MIAL — *Decided (event-driven) / Proposed (specific triggers and numbers)*
 - **Why:** G-2 and cost. Jev is asked when something happens. Sonnet is asked every SONNET_EVERY_N_JEV decisions or when you talk. Sonnet can retune all of it.
 
