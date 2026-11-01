@@ -94,10 +94,29 @@
     $('statsBody').replaceChildren(...parts);
   };
 
+  // Requests dialog: the inhabitant's core requests, each with a delete control.
+  const renderRequests = () => {
+    const reqs = game.getRequests();
+    $('requestCount').textContent = reqs.length ? `(${reqs.length})` : '';
+    $('requestsEmpty').hidden = reqs.length > 0;
+    $('requestList').replaceChildren(...reqs.map((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'request';
+      const meta = Object.assign(document.createElement('div'), { className: 'request-meta', textContent: `${new Date(r.at).toLocaleString()} · tick ${r.tick}` });
+      const text = Object.assign(document.createElement('div'), { className: 'request-text', textContent: r.text });
+      const del = Object.assign(document.createElement('button'), { type: 'button', className: 'btn request-delete', textContent: '✕', title: 'Delete this request' });
+      del.setAttribute('aria-label', 'Delete this request');
+      del.addEventListener('click', () => game.deleteRequest(i));
+      li.append(meta, text, del);
+      return li;
+    }));
+  };
+
   let latest; // the render data the draw loop shows; refreshed on ticks and decisions
   game.on((type, payload) => {
     if (type === 'chat') chat.appendMessage(payload);
     if (type === 'edit-applied') renderEdits();
+    if (type === 'requests-changed') renderRequests();
     if (type === 'ticked' || type === 'jev-decision' || type === 'edit-applied' || type === 'run-applied') latest = game.getRenderData();
     if (type === 'ticked' && $('statsDialog').open) renderStats();
     updateControls();
@@ -109,6 +128,7 @@
   BL.logApi = savedSettings.logApi !== false;
   chat.renderChat(game.getChat());
   renderEdits();
+  renderRequests();
   latest = game.getRenderData();
   updateControls();
 
@@ -134,6 +154,7 @@
     game.factoryReset();
     chat.renderChat(game.getChat());
     renderEdits();
+    renderRequests();
     latest = game.getRenderData();
   });
   $('downloadBtn').addEventListener('click', () => {
@@ -143,6 +164,20 @@
     a.download = `world-v${game.getVersion()}.md`;
     a.click();
     URL.revokeObjectURL(a.href);
+  });
+
+  $('uploadBtn').addEventListener('click', () => $('uploadInput').click());
+  $('uploadInput').addEventListener('change', async () => {
+    const file = $('uploadInput').files[0];
+    $('uploadInput').value = ''; // so choosing the same file again still fires change
+    if (!file) return;
+    const r = game.uploadSource(await file.text(), file.name);
+    if (!r.ok) alert(`Upload failed: ${r.reason}`);
+  });
+
+  $('requestsBtn').addEventListener('click', () => {
+    renderRequests();
+    $('requestsDialog').showModal();
   });
 
   $('chatForm').addEventListener('submit', (e) => {

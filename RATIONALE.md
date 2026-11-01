@@ -165,6 +165,15 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-22 Each edit-list entry has "revert to here" — *Decided*
 - **Why:** G-5. It's the manual way out of a halted world short of a factory reset. A revert is itself a new version with a comment, so history is never rewritten.
 
+### D-37 You can upload a world MIAL file into the running world — *Decided*
+- **Intent:** your call, the counterpart to Download. A downloaded or hand-edited world goes back in without a factory reset.
+- **Shape:** the file's whole text becomes the next version, authored `user` with the comment "upload <file name>", so it shows in the edit list and can be reverted (D-22). The state is kept, as with any edit; `initial-state` only matters for the next new game. Like a revert, it clears `halted`.
+- **Check:** only that the file has at least one `# definition`, to catch picking the wrong file. Nothing else is checked, the same as model edits (D-6): a world that breaks goes to repair.
+
+### D-38 Core requests are kept in their own list until you delete them — *Decided*
+- **Intent:** your call. Requests scroll away in the chat (and the chat is capped at MAX_CHAT), and they're your to-do list for the core.
+- **Shape:** every non-empty `core_request` is also appended to `requests` in the save, shown by the Requests button with a count. Each has an ✕ that deletes it. Deleting is UI bookkeeping only: the inhabitant isn't told, and the chat entry stays. A factory reset clears the list; a new game keeps it.
+
 ### D-23 Every Sonnet call includes the whole world source — *Decided*
 - **Alternatives:** send only the relevant definitions; send an index plus on-request reads.
 - **Why:** Sonnet can't edit what it can't see, and the world is small. Partitioning is a future design question once the source grows (around 20 KB).

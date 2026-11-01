@@ -37,7 +37,10 @@ SOFTWARE.
       <button id="stepBtn" class="btn" title="Advance one tick (while paused)">Step</button>
       <button id="newGameBtn" class="btn" title="Restart the world from the current rules">New game</button>
       <button id="downloadBtn" class="btn" title="Download the current world MIAL">Download MIAL</button>
+      <button id="uploadBtn" class="btn" title="Replace the running world's MIAL with a file (a new version; the state is kept)">Upload MIAL</button>
+      <input id="uploadInput" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" hidden>
       <button id="settingsBtn" class="btn" title="API keys and call gaps">Settings</button>
+      <button id="requestsBtn" class="btn" title="Core changes the inhabitant has asked for">Requests <span id="requestCount" class="count"></span></button>
       <button id="statsBtn" class="btn" title="Counts kept by the core and by the world">Stats</button>
       <button id="resetBtn" class="btn btn-danger" title="Restore the default world and clear everything">Factory reset</button>
     </div>
@@ -101,6 +104,17 @@ SOFTWARE.
       <div class="dialog-actions">
         <button value="cancel" class="btn">Cancel</button>
         <button value="save" id="settingsSave" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="requestsDialog" class="dialog">
+    <form method="dialog">
+      <h2>Core change requests</h2>
+      <ol id="requestList" class="request-list"></ol>
+      <p id="requestsEmpty" class="hint">No requests yet.</p>
+      <div class="dialog-actions">
+        <button value="close" class="btn btn-primary">Close</button>
       </div>
     </form>
   </dialog>

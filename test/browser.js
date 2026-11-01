@@ -32,7 +32,7 @@ const check = (id, ok, detail) => {
   const side = await page.locator('.side-pane').boundingBox();
   check('U-2', world.width > 400 && side.width > 320 && Math.abs(world.y - side.y) < 2, `side by side: world ${Math.round(world.width)}px, chat ${Math.round(side.width)}px`);
 
-  const toolbar = ['#playBtn', '#stepBtn', '#newGameBtn', '#downloadBtn', '#settingsBtn', '#resetBtn', '#counters'];
+  const toolbar = ['#playBtn', '#stepBtn', '#newGameBtn', '#downloadBtn', '#uploadBtn', '#requestsBtn', '#settingsBtn', '#resetBtn', '#counters'];
   const visible = await Promise.all(toolbar.map(s => page.locator(s).isVisible()));
   check('U-6', visible.every(Boolean), 'toolbar controls and counters visible');
 
@@ -109,6 +109,29 @@ const check = (id, ok, detail) => {
   check('U-8', statsTables >= 2 && /jev-decisions/.test(statsText) && /low-ticks/.test(statsText), `stats dialog shows ${statsTables} tables (core and world)`);
   await page.screenshot({ path: path.join(SHOTS, 'stats.png') });
   await page.keyboard.press('Escape');
+
+  // Requests: the fake mind's core request is listed with a count, and ✕ removes it.
+  const reqBefore = await page.evaluate(() => BL.app.game.getRequests().length);
+  const countText = await page.locator('#requestCount').textContent();
+  await page.click('#requestsBtn');
+  await page.waitForTimeout(100);
+  const listed = await page.locator('#requestList .request').count();
+  await page.screenshot({ path: path.join(SHOTS, 'requests.png') });
+  if (listed) await page.locator('#requestList .request-delete').first().click();
+  await page.waitForTimeout(100);
+  const listedAfter = await page.locator('#requestList .request').count();
+  await page.keyboard.press('Escape');
+
+  // Upload: a file goes in as a new version in the edit list.
+  const vBefore = await page.evaluate(() => BL.app.game.getVersion());
+  const src = await page.evaluate(() => BL.app.game.getSource());
+  await page.setInputFiles('#uploadInput', { name: 'my-world.md', mimeType: 'text/markdown', buffer: Buffer.from(src) });
+  await page.waitForFunction((v) => BL.app.game.getVersion() === v + 1, vBefore, { timeout: 3000 }).catch(() => {});
+  const uploaded = await page.evaluate(() => BL.app.game.getEditLog().at(-1).comment);
+  const topEdit = await page.locator('.edit .edit-comment').first().textContent();
+  check('U-9', reqBefore >= 1 && countText === `(${reqBefore})` && listed === reqBefore && listedAfter === reqBefore - 1 &&
+    uploaded === 'upload my-world.md' && topEdit === uploaded && await page.locator('#uploadBtn').isVisible(),
+    `requests ${listed} listed → ${listedAfter} after ✕; upload added "${uploaded}"`);
 
   await page.click('#settingsBtn');
   await page.waitForTimeout(100);

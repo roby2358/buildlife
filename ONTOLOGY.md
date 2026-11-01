@@ -132,7 +132,7 @@ A Record with at least `type` (string). Types the default MIAL emits: `arrived`,
 | comment | string | Required, like a commit message |
 | source | string | Markdown with one or more `# name` blocks. Each one replaces the definition with that name, or is appended if the name is new |
 | delete | string[] | Names of definitions to remove |
-| author | `sonnet` \| `repair` \| `user` \| `system` | `user` for reverts, `system` for the default world (v1) |
+| author | `sonnet` \| `repair` \| `user` \| `system` | `user` for reverts and uploads, `system` for the default world (v1) |
 | at | ISO time + world tick | |
 | version | number | The WorldSource version this edit produced |
 
@@ -148,11 +148,15 @@ A Record with at least `type` (string). Types the default MIAL emits: `arrived`,
 | text | string | |
 | at | time + tick | |
 
+### 1.10a CoreRequest [D]
+*Serves:* G-4.
+`{text, at, tick}`, one per non-empty `core_request` in a Sonnet reply, kept in `requests` until you delete it (D-38). Deleting doesn't touch the chat or tell the inhabitant.
+
 ### 1.11 Counters [P]
 `jevCalls`, `sonnetCalls`, `sonnetRuns`, `jevSinceSonnet`, `repairStreak`, `lastJevAt`, `lastSonnetAt`. They exist for cadence, the cost display, and the repair limit.
 
 ### 1.12 SaveGame [P]
-The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versions[], editLog[], chat[], counters, eventHistory[], halted}`. API keys are stored separately under `buildlife.keys` and are never included in the download.
+The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versions[], editLog[], chat[], requests[], counters, eventHistory[], halted}`. API keys are stored separately under `buildlife.keys` and are never included in the download.
 
 ---
 
@@ -363,7 +367,7 @@ on send:  jevSinceSonnet = 0; the waiting-user flag clears
 on reply: chat reflective-mind-thought (summary, then the summarized thinking); if say: chat inhabitant;
           for each edit: apply-edit (author sonnet)
           then for each run: run once (author sonnet)
-          if core_request: chat core-request (highlighted)
+          if core_request: chat core-request (highlighted); append to requests
 ```
 `CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. The reply is a JSON object under structured output rather than a tool call. There is no server-side fallback (Haiku 5.5 has none), so a refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
 
@@ -414,6 +418,8 @@ load on start: if a save exists, restore it; else source = DEFAULT_WORLD; state 
 new game: state = initial-state() from the current source; source and edit log are kept
 factory reset: source = DEFAULT_WORLD; clear all game data (keys kept)
 download: saves the current WorldSource as world-v<version>.md
+upload: a file's text becomes the next version (author user, "upload <name>"); state kept; clears halted (D-37)
+factory reset also clears requests; new game keeps them
 ```
 
 ---
@@ -500,14 +506,16 @@ Every command checks that it's legal. An illegal command returns `{ok:false, rea
 | `applyEdit(edit)` | Edit has a comment and parses (see the apply-edit rule) | Applies it, versions it, and logs it |
 | `runOnce({comment, source, author})` | Not halted or repairing, state exists | Calls the first definition once on the live state (the run-once rule); the source is unchanged |
 | `revertTo(version)` | Always [D] | Restores that snapshot as a new version with the comment "revert to vN"; clears `halted` |
+| `uploadSource(text, name)` | Text has at least one `# definition` | The text becomes the next version, authored `user` with the comment "upload <name>"; the state is kept; clears `halted` (D-37) |
+| `deleteRequest(index)` | Index names a request | Removes that core request from the list (D-38) |
 | `newGame()` | Always | Recreates state from the current source |
 | `factoryReset()` | You confirm | Restores the default world |
 | `setSettings({jevGapMs, sonnetGapMs})` | Gaps ≥ 0 | Sets the call-gap floors. The UI stores them, and the API keys, through the store (never in the save) |
 
-Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it saves `world-v<version>.md`.
+Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it saves `world-v<version>.md`. Upload MIAL reads a chosen file and calls `uploadSource`.
 
 ### Read-only queries
-`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
+`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getRequests()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
 
 ### Events (core → UI)
 
@@ -520,10 +528,11 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 | `edit-applied` | Edit | Chat (`edit`) and the edit list |
 | `run-applied` | comment | Chat (`run`), canvas redraw |
 | `core-request` | text | Chat, highlighted |
+| `requests-changed` | requests | Requests count and dialog |
 | `mial-error` | message, definition | Chat (`error`) |
 | `repair-started` / `halted` | streak | Chat (`system`) |
 | `api-error` | provider, message | Chat (`error`) |
 | `changed` | — | Toolbar, counters and status refresh |
 
 ### Client contract
-The UI calls only commands and queries and listens to events. It never calls MIAL entry points directly and never writes to `state`. The Stats button shows `getStatsData()` and refreshes on each tick while it's open.
+The UI calls only commands and queries and listens to events. It never calls MIAL entry points directly and never writes to `state`. The Stats button shows `getStatsData()` and refreshes on each tick while it's open. The Requests button shows `getRequests()` with a count, and each entry's ✕ calls `deleteRequest`.

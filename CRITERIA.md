@@ -28,6 +28,8 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-20 | Sonnet replies: a refusal with `stop_details`; a reply with a summary and summarized thinking blocks; the built request | A refusal goes to chat as an error naming its category and explanation, with no change. The summary and the thinking summary appear together as one Sonnet entry. Requests ask for `thinking: {adaptive, summarized}`, and neither the schema nor the core preamble asks for reasoning in the reply text | automated |
 | R-21 | Default world: ticks with and without a rise in `core.reflective-mind-edits`; Jev's prompt | Wonder drains by its DECAY. The first tick only notes the edit count. A later rise, from any number of edits, fills wonder to METER_MAX and emits `created`; then it drains again. Jev's needs line doesn't mention wonder | automated |
 | R-25 | A reply with a run that adds a pond via the world's `structure`; a reply whose edit defines a helper its run uses; runs that throw, return a non-record, or have no definition; the default world after a Sonnet run vs. another author's run | The pond appears once and stays single over later ticks; the source and version are unchanged; chat shows `run`; `core.reflective-mind-runs` is 1. The run sees the same reply's helper. A failed run is a chat error, leaves the state unchanged, and starts no repair. Only the Sonnet run fills wonder | automated |
+| R-27 | Sonnet replies with core requests, one empty; `deleteRequest` with a valid and with bad indexes; a reload; a factory reset | Each non-empty request is appended to `getRequests()` with its time and tick. A delete removes exactly that one; a bad index changes nothing. The list survives a reload and a factory reset clears it | automated |
+| R-26 | `uploadSource(text, name)` with an edited copy of the source; text with no definitions; an upload into a halted world | It becomes the next version, authored `user` with the comment "upload <name>", snapshotted and revertable; the state is unchanged. Text with no `# definition` is rejected with no change. An upload clears `halted` | automated |
 | R-24 | Default world; an EMOJI edit changing one and adding one; a structure with its own `emoji` field; EMOJI not a record, or deleted | Every default place and the inhabitant has an emoji. The edit shows in `getRenderData().emoji`. The structure's emoji reaches render data. A bad or missing EMOJI gives an empty map, never a throw | automated |
 | R-23 | Default world: walking 5 tiles to the well vs. an idle twin; walking with food, water and rest near 0 | The walker has paid exactly 5 × MOVE_COST more food, water and rest, and nothing more of wood or wonder. Meters stay ≥ 0 | automated |
 | R-22 | The default world, an edit written in expanded form, and literals of every kind | Every stored version (and its snapshot) is the compact form of its source: a bullet's leading atoms share its line. The parsed tree is unchanged | automated |
@@ -46,6 +48,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 | U-6 | The toolbar has play/pause/step, new game, download MIAL, settings (keys), factory reset, and call counters | automated |
 | U-7 | Places and the inhabitant are drawn as their emoji. A structure the models add with no emoji appears as a generic labelled shape, and an EMOJI edit redraws it as its emoji | automated |
 | U-8 | The Stats button opens a dialog showing the core stats and each world stats record | automated |
+| U-9 | Upload MIAL loads a chosen file as a new version in the edit list. The Requests button shows a count and opens a list of the inhabitant's core requests, each with an ✕ that removes it | automated |
 
 ## X — Experience
 
@@ -59,7 +62,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 
 ## Status
 
-2026-11-01. `npm test` covers R-1 to R-25, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
+2026-11-01. `npm test` covers R-1 to R-27, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-9. Both pass.
 
 **X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
 

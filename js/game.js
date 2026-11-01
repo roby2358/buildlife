@@ -22,6 +22,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     versions: [],      // VersionSnapshot {version, text}
     editLog: [],       // Edit
     chat: [],          // ChatEntry
+    requests: [],      // CoreRequest {text, at, tick}, until the user deletes them
     eventHistory: [],  // recent events and decisions (JS objects)
     counters: freshCounters(),
     halted: false,
@@ -54,6 +55,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     versions: g.versions,
     editLog: g.editLog,
     chat: g.chat,
+    requests: g.requests,
     counters: g.counters,
     eventHistory: g.eventHistory,
     halted: g.halted,
@@ -228,7 +230,9 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     for (const run of parsed.runs) runOnce({ ...run, author });
     if (parsed.coreRequest) {
       addChat('core-request', parsed.coreRequest);
+      g.requests.push({ text: parsed.coreRequest, ...stamp() });
       emit('core-request', { text: parsed.coreRequest });
+      emit('requests-changed', g.requests);
     }
     save();
   };
@@ -331,6 +335,29 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     return { ok: true, events: [entry] };
   };
 
+  // Upload rule: a whole world source from a file becomes the next version; the state is kept.
+  const uploadSource = (text, name) => {
+    const raw = String(text || '');
+    if (!W.splitBlocks(raw).blocks.some(b => b.name)) return { ok: false, reason: 'the file has no "# definition" blocks' };
+    const comment = `upload ${String(name || '').trim() || 'file'}`;
+    const entry = setSource(raw, { author: 'user', comment, names: [], deleted: [] });
+    g.halted = false;
+    g.repairing = false;
+    g.counters.repairStreak = 0;
+    addChat('edit', `v${entry.version} · ${comment}`);
+    emit('edit-applied', entry);
+    save();
+    return { ok: true, events: [entry] };
+  };
+
+  const deleteRequest = (index) => {
+    if (!Number.isInteger(index) || index < 0 || index >= g.requests.length) return { ok: false, reason: `no request at ${index}` };
+    g.requests.splice(index, 1);
+    emit('requests-changed', g.requests);
+    save();
+    return { ok: true, events: [] };
+  };
+
   const newGame = () => {
     const r = W.initialState(g.loaded);
     g.halted = false;
@@ -348,7 +375,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const factoryReset = () => {
     store.clearGame();
     Object.assign(g, {
-      source: '', version: 0, versions: [], editLog: [], chat: [], eventHistory: [],
+      source: '', version: 0, versions: [], editLog: [], chat: [], requests: [], eventHistory: [],
       halted: false, repairing: false, userWaiting: false, state: null,
     });
     g.counters = freshCounters();
@@ -405,6 +432,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
         versions: saved.versions || [],
         editLog: saved.editLog || [],
         chat: saved.chat || [],
+        requests: saved.requests || [],
         eventHistory: saved.eventHistory || [],
         halted: !!saved.halted,
         state: saved.state,
@@ -418,7 +446,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   };
 
   return {
-    boot, start, pause, step, tickOnce, pump, sendUserMessage, applyEdit, runOnce, revertTo, newGame, factoryReset, setSettings,
+    boot, start, pause, step, tickOnce, pump, sendUserMessage, applyEdit, runOnce, revertTo, uploadSource, deleteRequest, newGame, factoryReset, setSettings,
     on: (fn) => listeners.push(fn),
     getState: () => g.state,
     getSource: () => g.source,
@@ -426,6 +454,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     getEditLog: () => g.editLog,
     getVersions: () => g.versions,
     getChat: () => g.chat,
+    getRequests: () => g.requests,
     getCounters: () => ({ ...g.counters, inFlight: { ...g.inFlight } }),
     getSettings: () => ({ ...g.settings }),
     getEventHistory: () => g.eventHistory,

@@ -2,6 +2,11 @@
 
 Newest first.
 
+### 2026-11-01: Upload MIAL and a Requests list
+- New toolbar button Upload MIAL: a chosen file becomes the next version (author `user`, "upload <name>"), revertable, with the state kept (your call; D-37, R-26). New command `uploadSource`.
+- New toolbar button Requests (n): the inhabitant's core requests, saved in `requests` and each removable with ✕ (your call; D-38, R-27). New command `deleteRequest`, query `getRequests`, event `requests-changed`. Saves from before this start with an empty list.
+- U-9 covers both buttons.
+
 ### 2026-11-01: The reflective mind's MIAL names lose "sonnet"
 The role runs Claude Haiku, so every name the mind sees now says what it is (your call). Entry points `sonnet-system`, `sonnet-prompt` and `sonnet-trigger?` became `reflective-mind-system`, `reflective-mind-prompt` and `reflective-mind-trigger?`. The core stats `sonnet-calls`, `sonnet-edits` and `sonnet-runs` became `reflective-mind-calls`, `reflective-mind-edits` and `reflective-mind-runs`. The chat kind `sonnet-thought` became `reflective-mind-thought`, the event `sonnet-reply` became `reflective-mind-reply`, and the constant `SONNET_EVERY_N_JEV` became `REFLECTIVE_MIND_EVERY_N_JEV`. JS internals (`SONNET_MODEL`, `buildSonnet`, …) keep the old name. Worlds saved or downloaded before this need those definitions renamed, or a factory reset. Entries below keep the names of their time.
 
