@@ -69,7 +69,8 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | grid | Record `{w, h}` | Size in tiles |
 | structures | list of Structure | |
 | inhabitant | Inhabitant | |
-| meters | Record, name → number | Starts as `food water rest wood`. **Render contract:** every key gets a bar |
+| meters | Record, name → number | Starts as `food water rest wood wonder`. **Render contract:** every key gets a bar |
+| seen-edits | number | In the default world: the `core.sonnet-edits` count the wonder rule last saw |
 | events | list of Event | **This tick's** events only. `tick` replaces the list each call |
 | low-ticks | Record, meter → number | In the default world: ticks each meter has spent below `LOW_THRESHOLD` (the low-ticks rule). World-owned, so it follows the world's rules |
 | core | CoreStats | **Reserved, core-owned, always the last field.** Written by the core before and after every tick; anything the MIAL writes there is overwritten [D] |
@@ -290,7 +291,20 @@ jev-trigger?(state, events)  = any event in events has type in {full, low, recov
                                or (status = idle and tick % IDLE_RECHECK_TICKS = 1)
                                # never left idle without asking, but not every tick
 sonnet-trigger?(state, events, since) = since >= SONNET_EVERY_N_JEV
+                                        or (since >= 1 and wonder < LOW_THRESHOLD)
 ```
+
+### 4.5a Wonder *(MIAL)* [D]
+*Serves:* the motivation to create (DYNAMICS, "the world drifts"). Wonder is the fifth need. It decays like the others and counts toward the half-speed penalty. No place refills it, and Jev's needs list omits it because Jev can't act on it.
+```
+tick(state) = feed-wonder(base-tick(state))      # base-tick is decay, act, crossings, low-ticks
+feed-wonder(state):
+  edits = state.core.sonnet-edits                # a core fact (CoreStats)
+  if seen-edits is set and edits > seen-edits:   # any creation, however small or many
+    wonder = METER_MAX; emit created              # tops it off; then it drains again
+  seen-edits = edits
+```
+`sonnet-system` tells Sonnet that only creating or improving something, through an edit, refills wonder.
 
 ### 4.6a Low-ticks *(MIAL)* [D]
 *Serves:* G-4 (judging changes by numbers).
@@ -347,7 +361,7 @@ on reply: chat sonnet-thought (summary, then the summarized thinking); if say: c
           for each edit: apply-edit (author sonnet)
           if core_request: chat core-request (highlighted)
 ```
-`CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. Sonnet 5.5 rejects forced tool use, so the reply is a JSON object under structured output rather than a tool call. Requests carry `fallbacks: "default"`, so a refusal is re-run server-side on a fallback model. A remaining refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
+`CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. The reply is a JSON object under structured output rather than a tool call. There is no server-side fallback (Haiku 5.5 has none), so a refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
 
 ### 4.10 Apply edit *(core)* [D: per definition, no validation]
 *Serves:* G-1, G-4.
@@ -397,7 +411,7 @@ download: saves the current WorldSource as world-v<version>.md
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
 
 ### 5.2 Sonnet [D]
-*Serves:* G-1, G-2, G-6. Model: `claude-sonnet-5-5`, called directly from the browser.
+*Serves:* G-1, G-2, G-6. "Sonnet" is the role name of the reflective mind, used in the MIAL entry points (`sonnet-system`, `sonnet-prompt`, `sonnet-trigger?`) and in code. The model filling the role is `SONNET_MODEL` (Claude Haiku 5.5), shown in the UI as `SONNET_NAME`, and it's called directly from the browser.
 - **Sees:** `sonnet-system`, `sonnet-prompt`, the core preamble, the full WorldSource, and recent chat.
 - **Can do:** speak as the inhabitant, edit any definition (including the prompts and cadence of both models), and request core changes.
 - **Can't do:** edit core JS, the core preamble, or the repair prompt. Can't change the core call-gap floors.
@@ -418,14 +432,16 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | GRID_W, GRID_H | 12, 12 | tiles | D-9 |
 | METER_MAX | 100 | | D-10 |
 | LOW_THRESHOLD | 30 | meter units | D-10 |
-| DECAY.food | 0.125 | per tick | D-10 |
-| DECAY.water | 0.2 | per tick | D-10 |
-| DECAY.rest | 0.075 | per tick | D-10 |
+| DECAY.food | 0.15 | per tick | D-10 |
+| DECAY.water | 0.24 | per tick | D-10 |
+| DECAY.rest | 0.09 | per tick | D-10 |
 | DECAY.wood | 0.1 | per tick | D-10 |
+| DECAY.wonder | 0.05 | per tick | D-32 |
 | BASE_SPEED | 0.25 | tiles per tick | D-10 |
 | SLOW_FACTOR | 0.5 | × speed | D-2 |
-| RATE (bush, well, tree) | 2 | per tick | D-10 |
-| RATE (shack) | 1 | per tick | D-10 |
+| RATE (bush, well) | 1 | per tick | D-10 |
+| RATE (shack) | 0.5 | per tick | D-10 |
+| RATE (tree) | 2 | per tick | D-10 |
 | SONNET_EVERY_N_JEV | 5 | Jev decisions | D-7 |
 | IDLE_RECHECK_TICKS | 20 | ticks | D-7 |
 
@@ -446,7 +462,8 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | MAX_CHAT | 500 | chat entries kept | D-11 |
 | MAX_VERSIONS | 200 | snapshots kept (v1 always) | D-22 |
 | JEV_MODEL | `typesafe/jev-router` | | D-17 |
-| SONNET_MODEL | `claude-sonnet-5-5` | | D-17 |
+| SONNET_MODEL | `claude-haiku-5-5` | | D-17 |
+| SONNET_NAME | `Haiku` | the reflective mind's name in the UI | D-17 |
 
 ---
 

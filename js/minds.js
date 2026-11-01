@@ -140,7 +140,6 @@ Your only job is to make it load and tick again with as little change as possibl
     model: C.SONNET_MODEL,
     max_tokens: C.SONNET_MAX_TOKENS,
     thinking: { type: 'adaptive', display: 'summarized' },
-    fallbacks: 'default',
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: user }],
     output_config: { format: { type: 'json_schema', schema: SONNET_SCHEMA } },
@@ -170,15 +169,15 @@ Your only job is to make it load and tick again with as little change as possibl
   });
 
   const parseSonnet = (resp) => {
-    if (!resp || !Array.isArray(resp.content)) return { ok: false, error: 'Sonnet returned no content' };
+    if (!resp || !Array.isArray(resp.content)) return { ok: false, error: `${C.SONNET_NAME} returned no content` };
     if (resp.stop_reason === 'refusal') {
       const d = resp.stop_details || {};
-      return { ok: false, error: `Sonnet declined this request (refusal${d.category ? `: ${d.category}` : ''})${d.explanation ? `. ${d.explanation}` : ''}` };
+      return { ok: false, error: `${C.SONNET_NAME} declined this request (refusal${d.category ? `: ${d.category}` : ''})${d.explanation ? `. ${d.explanation}` : ''}` };
     }
-    if (resp.stop_reason === 'max_tokens') return { ok: false, error: 'Sonnet ran out of tokens before finishing its reply' };
+    if (resp.stop_reason === 'max_tokens') return { ok: false, error: `${C.SONNET_NAME} ran out of tokens before finishing its reply` };
     const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const data = parseJSON(text);
-    if (!data || typeof data !== 'object') return { ok: false, error: `Sonnet's reply was not valid JSON: ${text.slice(0, 200)}` };
+    if (!data || typeof data !== 'object') return { ok: false, error: `${C.SONNET_NAME}'s reply was not valid JSON: ${text.slice(0, 200)}` };
     const edits = Array.isArray(data.edits) ? data.edits.filter(e => e && typeof e === 'object').map(e => ({
       comment: String(e.comment || '').trim() || '(no comment)',
       source: String(e.source || ''),

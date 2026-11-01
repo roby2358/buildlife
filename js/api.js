@@ -49,10 +49,9 @@ BL.createApi = (getKeys) => {
       'X-Title': 'BuildLife',
     }, body),
 
-    sonnet: (body) => post('Sonnet', 'https://api.anthropic.com/v1/messages', {
+    sonnet: (body) => post(BL.CONFIG.SONNET_NAME, 'https://api.anthropic.com/v1/messages', {
       'x-api-key': getKeys().anthropic.trim(),
       'anthropic-version': '2026-10-21',
-      'anthropic-beta': 'server-side-fallback-2026-07-01',
       'anthropic-dangerous-direct-browser-access': 'true',
       'content-type': 'application/json',
     }, body),

@@ -32,9 +32,9 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Why:** G-2. This matches what Jev is built for (typed, cheap judgments) and gives Sonnet the long-horizon work. Because Sonnet can rewrite Jev's prompt, Sonnet teaches and Jev executes, and the relationship can change over time.
 
 ### D-17 Models and transport — *Decided (models) / Proposed (transport)*
-- Sonnet is `claude-sonnet-5-5`, called with plain `fetch` from the browser (`anthropic-dangerous-direct-browser-access: true`, API version `2026-10-21`). The SDK isn't an option on a file:// page with no bundler.
-- **Sonnet replies through structured output, not a tool.** Its reply is a JSON object under `output_config.format` (`SONNET_SCHEMA`), so edits arrive as fields rather than prose to parse. *Alternatives:* a forced `act` tool, which Sonnet 5.5 rejects with a 400 (`tool_choice` `any`/`tool` aren't supported on it); an `auto` tool with a prompt instruction, which doesn't guarantee a call. A tool-based design is still worth revisiting if Sonnet ever needs to read definitions on demand (see D-23).
-- Requests carry `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`). A safety refusal is re-run on a fallback model inside the same call instead of costing a reflection.
+- **The reflective mind runs on Claude Haiku 5.5** (`claude-haiku-5-5`), chosen by you as better sized for this job: a small world, short structured replies. It costs a twentieth of Sonnet 5.5's per-token price ($0.10/$0.50 against $2/$10 per million tokens). "Sonnet" stays the role name in the MIAL entry points and code, because existing worlds depend on those names; the UI shows `SONNET_NAME`. It's called with plain `fetch` from the browser (`anthropic-dangerous-direct-browser-access: true`, API version `2026-10-21`). The SDK isn't an option on a file:// page with no bundler.
+- **The reply is structured output, not a tool.** It's a JSON object under `output_config.format` (`SONNET_SCHEMA`), so edits arrive as fields rather than prose to parse. *Alternatives:* a forced `act` tool, which Sonnet 5.5 rejected with a 400; an `auto` tool with a prompt instruction, which doesn't guarantee a call. A tool-based design is still worth revisiting if Sonnet ever needs to read definitions on demand (see D-23).
+- **No server-side fallback:** Haiku 5.5 doesn't offer one, so a refusal is a chat error naming its category, and the next reflection tries again.
 - The system text (sonnet-system + core preamble + world source) is one prompt-cached block. It changes only when the world is edited, so most reflections read it from the cache.
 - Jev is `typesafe/jev-router` on OpenRouter, the only Jev slug listed (checked 2026-10-31). It supports `response_format`/structured outputs, so the `actions` list becomes a JSON-schema enum.
 - **CORS from file://:** you already have many pages that call OpenRouter this way. Anthropic needs the `anthropic-dangerous-direct-browser-access: true` header, which is expected to work and is checked first during implementation.
@@ -70,17 +70,16 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-9 Canvas with simple shapes, 12×12 grid — *Decided (canvas) / Proposed (size)*
 - **Why:** Small enough that walking from one structure to another takes seconds, not minutes.
 
-### D-10 Initial numbers — *Proposed, tuned by X-1*
-- **Intent:** a sensible mind should keep every need up, and a careless one should visibly pay with half speed. Decision quality has to matter (DYNAMICS, "two minds, one body").
-- **DECAY:** chosen by comparing decay scales with everything else held fixed. Stand-in policies replace Jev: `lowest` (always the lowest meter) and `random` (any place); Jev latency is 1.5 s; gaps are the defaults.
-  - `Measured by: node tools/tune.js --runs 3 --decay-scale 1 [--policy random]` → lowest: 0% at half speed, lowest meter ≈ 75; random: 0%, lowest meter 39–67. Needs never bite.
-  - `--decay-scale 2` → lowest: 0%, ≈ 67; random: 2–8% at half speed.
-  - `--decay-scale 2.5` (current values) → lowest: 0%, lowest meter ≈ 57; random: 7–49% at half speed. **Chosen.**
-  - `--decay-scale 3` → lowest: 0%, ≈ 47; random: 38–74%. `--decay-scale 4` → random 93%, X-1 fails for a careless mind.
-- **Not measured:** the real Jev's latency and choices (the stand-ins bracket it), and any Sonnet edits. About 78 Jev decisions per 15 minutes with the `lowest` policy, so roughly 16 Sonnet reflections at SONNET_EVERY_N_JEV.
-- The other numbers (TICK_MS, BASE_SPEED, RATE, LOW_THRESHOLD, grid size) are unmeasured first guesses.
-
-## Editing and recovery
+### D-10 Pressure numbers — *Decided (pressure level) / tuned by X-1*
+- **Intent:** a sensible mind should be able to keep every need up, but only just, and a careless one should visibly pay with half speed. Decision quality has to matter (DYNAMICS, "two minds, one body"), and you asked for more pressure without cruelty.
+- **Current:** refill rates are half what they were for the bush, well and shack (tree unchanged). Decay is 1.2× the earlier values for food, water and rest, while wood stays at 0.1. The share of time needed for refilling, the sum of DECAY ÷ RATE, is 0.15 + 0.24 + 0.18 + 0.05 = 0.62, before walking.
+- **Alternatives measured** with halved rates and a scaled decay, using `node tools/tune.js --policy smart|lowest|random --decay-scale S` (S relative to the doubled decay you first asked for; the stand-ins replace Jev):
+  - 2× decay (as first asked): the sum is 1.0, which is infeasible. Even `smart` is at half speed 91% of the time.
+  - 1.5×: `smart` is slow 74%. 1.2×: `smart` 0%, lowest need ≈ 42; `random` 70–88%. 1×: `smart` 0%, lowest ≈ 56; `random` 54–68%.
+  - There's a cliff between 1.2× and 1.5×. 1.2× was chosen as tight but survivable.
+- **Evidence for the current values:** `Measured by: node tools/tune.js --runs 3 --policy smart|lowest|random` → smart: 0% at half speed, lowest need ≈ 42; lowest: about 1% (water); random: 80–89%. With `--create-every 600` (a creation only every 10 minutes), `smart` is slow 72% because wonder runs out and half speed drags every need down.
+- **Not measured:** the real Jev's latency and choices, and how often the real Sonnet creates.
+- The other numbers (TICK_MS, BASE_SPEED, LOW_THRESHOLD, grid size) are unmeasured first guesses.
 
 ### D-6 Edits replace, add, or delete whole definitions, with no validation; parsing is all or nothing — *Decided (unit, no validation) / Proposed (all or nothing)*
 - **Alternatives:** whole-file rewrite; validate with a dry-run tick and roll back; your approval.
@@ -119,6 +118,13 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Why:** Sonnet 5.5 declines requests that ask the model to reproduce its internal reasoning in the response text, under the `reasoning_extraction` category. Server-side fallback doesn't retry those.
 - **Evidence:** `Measured by:` a live session's console log. Refusals were frequent, and the response `msg_011CgbFMdgYXktba9SucKhcg` had `stop_details.category: "reasoning_extraction"`, on a request whose schema asked for `thought: your private reflection (shown to the neighbour as your thinking)`. The fix's effect on the refusal rate hasn't been measured yet.
 - G-4 legibility is kept: the chat shows the reply's `summary` plus the summarized thinking.
+
+### D-32 Wonder: a fifth need that only creating or improving refills — *Decided*
+- **Alternatives:** aspirations in `sonnet-system` only (a prompt the mind can edit away silently); world pressure only (seasons, decay of structures), which gives problems but no drive to make things; challenges from you in chat, which depend on you; a core-fixed goal or score, which cuts against the rules belonging to the inhabitant.
+- **Why:** In a stable world, Sonnet had no reason to change anything: "chop wood, carry water." Making creativity a need puts making things inside the survival loop it already understands. It's measured by a core fact (`core.sonnet-edits`), so the world doesn't trust its own say-so, and it needs no core change.
+- **Any creation tops wonder off** (your choice, over a fixed increment per creation). The rule becomes one plain deadline, "make something at least every few minutes," instead of bookkeeping. How much it made doesn't matter, only that it made something.
+- **Gaming:** trivial edits refill it as well as good ones. That's deliberately not prevented (D-24); whether the inhabitant keeps inventing or games the meter shows up in the edit log, and either is worth seeing.
+- **Numbers:** DECAY.wonder 0.05 drains a full meter to the threshold in about 5.8 minutes. `Measured by: node tools/tune.js --policy smart --create-every S` → every 60 s or 300 s: never slow after the start; 420 s: slow 66%; 600 s: slow 72%, as half speed cascades into the other needs. Sonnet reflects roughly every 2 minutes at the current cadence, and earlier when wonder is low. Unmeasured with the real Sonnet.
 
 ### D-7 Event-driven cadence, defined in MIAL — *Decided (event-driven) / Proposed (specific triggers and numbers)*
 - **Why:** G-2 and cost. Jev is asked when something happens. Sonnet is asked every SONNET_EVERY_N_JEV decisions or when you talk. Sonnet can retune all of it.

@@ -49,3 +49,12 @@ test('map / filter / reduce call closures', () => {
   ].join('\n');
   assert.strictEqual(run(src).value, 50);
 });
+
+test('eq and != compare strings by content and never throw on null', () => {
+  const loaded = M.loadSource(['# e', '- *', '  - a', '  - b', '- eq a b', '# n', '- *', '  - a', '  - b', '- != a b'].join('\n'));
+  const call = (name, a, b) => M.callDef(loaded, name, [a, b]);
+  assert.strictEqual(call('e', M.fromJS('x'), M.fromJS('x')).value.value, true);
+  assert.strictEqual(call('n', M.node(null), M.node(3)).value.value, true);
+  assert.strictEqual(call('e', M.node(null), M.node(null)).value.value, true);
+  assert.strictEqual(call('e', M.node(null), M.fromJS('x')).value.value, false);
+});

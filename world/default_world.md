@@ -26,13 +26,15 @@
 - mial
   - record
     - food
-      - `0.125`
+      - `0.15`
     - water
-      - `0.2`
+      - `0.24`
     - rest
-      - `0.075`
+      - `0.09`
     - wood
       - `0.1`
+    - wonder
+      - `0.05`
 
 # structure
 - *
@@ -51,16 +53,16 @@
   - record `"w"` GRID_W `"h"` GRID_H
   - `"structures"`
   - list
-    - structure `"bush"` `2` `2` `"food"` `2`
-    - structure `"well"` `9` `2` `"water"` `2`
-    - structure `"shack"` `2` `9` `"rest"` `1`
+    - structure `"bush"` `2` `2` `"food"` `1`
+    - structure `"well"` `9` `2` `"water"` `1`
+    - structure `"shack"` `2` `9` `"rest"` `0.5`
     - structure `"tree"` `9` `9` `"wood"` `2`
   - `"inhabitant"`
   - record `"x"` `6` `"y"` `6` `"goal"` `"idle"` `"progress"` `0` `"status"` `"idle"`
   - `"meters"`
-  - record `"food"` `80` `"water"` `80` `"rest"` `80` `"wood"` `80`
+  - record `"food"` `80` `"water"` `80` `"rest"` `80` `"wood"` `80` `"wonder"` `80`
   - `"low-ticks"`
-  - record `"food"` `0` `"water"` `0` `"rest"` `0` `"wood"` `0`
+  - record `"food"` `0` `"water"` `0` `"rest"` `0` `"wood"` `0` `"wonder"` `0`
   - `"events"`
   - `null`
 
@@ -375,6 +377,38 @@
 
 # tick
 - state
+- feed-wonder
+  - base-tick state
+
+# feed-wonder
+- state
+- let
+  - vars
+    - edits
+      - get
+        - get state `"core"`
+        - `"sonnet-edits"`
+    - seen
+      - get state `"seen-edits"`
+    - created
+      - and
+        - != seen `null`
+        - > edits seen
+    - noted
+      - put state `"seen-edits"` edits
+  - if
+    - created
+    - emit
+      - put noted `"meters"`
+        - put
+          - get noted `"meters"`
+          - `"wonder"`
+          - METER_MAX
+      - record `"type"` `"created"`
+    - noted
+
+# base-tick
+- state
 - let
   - vars
     - before
@@ -475,7 +509,15 @@
   - state
   - events
   - since
-- >= since SONNET_EVERY_N_JEV
+- or
+  - >= since SONNET_EVERY_N_JEV
+  - and
+    - >= since `1`
+    - <
+      - get
+        - get state `"meters"`
+        - `"wonder"`
+      - LOW_THRESHOLD
 
 # describe-meters
 - meters
@@ -488,7 +530,11 @@
         - `": "`
         - round
           - get meters m
-    - keys meters
+    - filter
+      - lambda
+        - m
+        - != m `"wonder"`
+      - keys meters
   - `", "`
 
 # describe-places
@@ -585,6 +631,7 @@
   - `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."`
   - `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."`
   - `"To remember something across reflections, write it into a definition such as notes and refer to it from your own prompt."`
+  - `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like them it slows you to half speed when low. Nothing in the world refills it: only creating something new or improving something that exists, through an edit. Any reflection that makes an edit fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."`
 
 # sonnet-prompt
 - *

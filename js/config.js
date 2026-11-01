@@ -14,6 +14,9 @@ BL.CONFIG = {
   MAX_VERSIONS: 200,
   JEV_MODEL: 'typesafe/jev-router',
   JEV_MAX_TOKENS: 400,
-  SONNET_MODEL: 'claude-sonnet-5-5',
+  // "Sonnet" is the role name of the reflective mind (sonnet-system, sonnet-prompt, ...);
+  // the model filling the role, and the name the UI shows, are these two (D-17).
+  SONNET_MODEL: 'claude-haiku-5-5',
+  SONNET_NAME: 'Haiku',
   SONNET_MAX_TOKENS: 16000,
 };

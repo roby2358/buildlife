@@ -2,6 +2,15 @@
 
 Newest first.
 
+### 2026-11-01: The reflective mind runs on Claude Haiku 5.5
+`SONNET_MODEL` changed from `claude-sonnet-5-5` to `claude-haiku-5-5` (your call: better sized for the job, at a twentieth of the price). Removed `fallbacks: "default"` and its beta header, because Haiku 5.5 has no server-side fallback. "Sonnet" stays the role name in the MIAL entry points and code, so existing worlds keep working; the UI shows the new `SONNET_NAME` ("Haiku") (D-17).
+
+### 2026-11-01: Wonder and more pressure
+- New fifth need, wonder, refilled only by creating or improving through an edit. It's measured by a rise in `core.sonnet-edits`. Any creation tops it off to METER_MAX, after which it drains again (D-32, R-21). The default `tick` became `feed-wonder` around the old body, now `base-tick`. Jev's needs list omits wonder. `sonnet-trigger?` also fires after any Jev decision while wonder is low (R-8). `sonnet-system` explains wonder.
+- More pressure (D-10): refill rates for the bush, well and shack were halved, from 2/2/1 to 1/1/0.5; decay for food, water and rest went from 0.125/0.2/0.075 to 0.15/0.24/0.09. The first request, 2× decay plus halved rates, measured as permanent half speed even with good play, so the decay increase was cut to 1.2×.
+- Fixed a bug in the copied interpreter: `eq` and `!=` threw on null (`'string' in null`). It surfaced through `feed-wonder`'s `!= seen null`. Test loops that wait for a Jev call are now bounded, so a broken world fails a test instead of hanging the suite.
+- `tools/tune.js` gained `--create-every` (simulated Sonnet edits that feed wonder) and per-meter low percentages.
+
 ### 2026-11-01: Fix reasoning_extraction refusals
 Live Sonnet calls were often refused with `stop_details.category: "reasoning_extraction"`. The reply schema's `thought` field asked for Sonnet's "private reflection … your thinking" in the response text. It was replaced by `summary` (what it noticed and decided), and requests now set `thinking: {type: "adaptive", display: "summarized"}`. The chat shows the summary plus the summarized thinking (D-31, R-20). Refusal errors now include the category and explanation.
 

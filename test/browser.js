@@ -41,6 +41,10 @@ const check = (id, ok, detail) => {
   await page.evaluate(() => BL.app.game.setSettings({ jevGapMs: 0, sonnetGapMs: 0 }));
   await page.fill('#chatInput', 'Hello there!');
   await page.click('#chatForm button');
+  // A second message prompts the fake Sonnet's second reflection, which files a core request.
+  await page.waitForSelector('.msg-inhabitant', { timeout: 15000 }).catch(() => {});
+  await page.fill('#chatInput', 'Anything you would like changed in the core?');
+  await page.click('#chatForm button');
   const kinds = ['user', 'inhabitant', 'jev', 'sonnet-thought', 'edit', 'core-request'];
   await page.waitForFunction((ks) => ks.every(k => document.querySelector(`.msg-${k}`)), kinds, { timeout: 60000 }).catch(() => {});
   const present = await page.evaluate((ks) => ks.filter(k => document.querySelector(`.msg-${k}`)), kinds);
@@ -64,7 +68,8 @@ const check = (id, ok, detail) => {
   const meterCount = await page.locator('.meter').count();
   const lowShown = await page.locator('.meter.low').count();
   const slowBadge = await page.locator('#slowBadge').isVisible();
-  check('U-3', meterCount === 4 && lowShown >= 1 && slowBadge, `${meterCount} labelled bars, ${lowShown} shown low, slow badge ${slowBadge}`);
+  const meterNames = await page.evaluate(() => Object.keys(BL.app.game.getRenderData().meters).length);
+  check('U-3', meterCount === meterNames && meterCount >= 4 && lowShown >= 1 && slowBadge, `${meterCount} labelled bars, ${lowShown} shown low, slow badge ${slowBadge}`);
   await page.screenshot({ path: path.join(SHOTS, 'low-meter.png') });
 
   // A structure invented by the models is drawn as a generic labelled shape.

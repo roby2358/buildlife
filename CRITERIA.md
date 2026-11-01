@@ -13,7 +13,7 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-5 | Inhabitant with goal `well` at a distance | It reaches the tile next to the well in ceil(distance / speed) ticks, ± 1. `arrived` fires once and status becomes `using` | automated |
 | R-6 | Using a structure | Its meter rises by rate − DECAY per tick. When it reaches METER_MAX: `full`, status `idle`, goal `idle` | automated |
 | R-7 | `apply-action` with each action in `actions` | Goal and status are set by the action rule. Neither `actions` nor `apply-action` emits an event | automated |
-| R-8 | Default cadence | `jev-trigger?` is true on full/low/recovered/idle events or when idle. `sonnet-trigger?` is true when since ≥ SONNET_EVERY_N_JEV | automated |
+| R-8 | Default cadence | `jev-trigger?` is true on full/low/recovered/idle events or when idle. `sonnet-trigger?` is true when since ≥ SONNET_EVERY_N_JEV, or after any Jev decision while wonder is below LOW_THRESHOLD | automated |
 | R-9 | Same source, same state, same action sequence, run twice | Identical states (determinism) | automated |
 | R-10 | `applyEdit` with a replacing def, a new def, a delete, and a source that doesn't parse | Replace, append, and remove work, and each adds one entry to the version, log, and chat. A source that doesn't parse changes nothing and returns diagnostics | automated |
 | R-11 | An edit that breaks `tick` (a runtime error, a missing definition, the wrong return type) | Ticking pauses and the repair call starts with CORE_REPAIR_PROMPT. After REPAIR_MAX consecutive failures the world is halted. One good tick resets the streak | automated |
@@ -26,6 +26,7 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-18 | Ticks, Jev decisions, an invalid reply and its retry; a tick that reads and scribbles on `state.core` | `state.core` holds the core's counts after each tick. World code sees the record as it stood before the tick, and anything it writes to `core` is overwritten | automated |
 | R-19 | Default world with some meters below LOW_THRESHOLD; a state with no `low-ticks` record | `low-ticks` counts one per tick for each meter below LOW_THRESHOLD, starting from zero (or from nothing for an older state) | automated |
 | R-20 | Sonnet replies: a refusal with `stop_details`; a reply with a summary and summarized thinking blocks; the built request | A refusal goes to chat as an error naming its category and explanation, with no change. The summary and the thinking summary appear together as one Sonnet entry. Requests ask for `thinking: {adaptive, summarized}`, and neither the schema nor the core preamble asks for reasoning in the reply text | automated |
+| R-21 | Default world: ticks with and without a rise in `core.sonnet-edits`; Jev's prompt | Wonder drains by its DECAY. The first tick only notes the edit count. A later rise, from any number of edits, fills wonder to METER_MAX and emits `created`; then it drains again. Jev's needs line doesn't mention wonder | automated |
 
 ## U — UI / readability
 
@@ -54,7 +55,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 
 ## Status
 
-2026-10-31. `npm test` covers R-1 to R-20, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
+2026-10-31. `npm test` covers R-1 to R-21, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
 
 **X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
 

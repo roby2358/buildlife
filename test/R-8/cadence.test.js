@@ -28,3 +28,10 @@ test('sonnet-trigger? fires when since ≥ SONNET_EVERY_N_JEV', () => {
   assert.strictEqual(t(N - 1), false);
   assert.strictEqual(t(N), true);
 });
+
+test('sonnet-trigger? fires after any Jev decision while wonder is low', () => {
+  const low = w.withFields(w.fresh(), { meters: { wonder: w.constant('LOW_THRESHOLD') - 1 } });
+  const t = (since) => w.W.sonnetTrigger(w.loaded, low, w.M.node(null), since).value;
+  assert.strictEqual(t(0), false);
+  assert.strictEqual(t(1), true);
+});

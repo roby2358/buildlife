@@ -32,7 +32,7 @@ BL.createFakeApi = () => {
         edits: sonnetCalls === 1 ? [{ comment: 'keep a notes definition', source: '# notes\n- `"I live near a well."`\n', delete: [] }] : [],
         core_request: sonnetCalls === 2 ? '(fake) Could the canvas show a little sun that moves with the ticks?' : '',
       };
-      return delay('Sonnet', body, { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
+      return delay(BL.CONFIG.SONNET_NAME, body, { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
     },
   };
 };

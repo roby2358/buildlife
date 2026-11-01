@@ -31,6 +31,7 @@ test('Sonnet request: sonnet-system, core preamble and full source; JSON output 
   assert.strictEqual(req.body.model, BL.CONFIG.SONNET_MODEL);
   assert.deepEqual(req.body.output_config.format.schema, BL.minds.SONNET_SCHEMA);
   assert.strictEqual(req.body.tool_choice, undefined, 'no forced tool use (rejected by Sonnet 5.5)');
+  assert.strictEqual(req.body.fallbacks, undefined, 'Haiku 5.5 has no server-side fallback');
 });
 
 test('the core preamble survives an edit that rewrites sonnet-system', () => {

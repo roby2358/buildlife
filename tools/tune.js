@@ -4,6 +4,7 @@
 // Usage: node tools/tune.js [--minutes 15] [--runs 5] [--latency 1.5] [--policy lowest|smart|random]
 //                           [--set NAME=value ...]   (overrides a MIAL constant, e.g. --set LOW_THRESHOLD=25)
 //                           [--decay-scale 1]        (multiplies every DECAY entry)
+//                           [--create-every 60]      (seconds between simulated Sonnet edits that feed wonder; 0 = never)
 // Policies: lowest (always the lowest meter), smart (need weighed against distance),
 //           random (a careless mind: any place, chosen by a fixed pseudo-random sequence).
 const vm = require('vm');
@@ -52,6 +53,7 @@ const latencyTicks = Math.round(Number(opt('latency', 1.5)) * 1000 / CONFIG.TICK
 const gapTicks = Math.ceil(CONFIG.JEV_MIN_GAP_MS / CONFIG.TICK_MS);
 const policy = opt('policy', 'lowest');
 const ticks = Math.round(minutes * 60 * 1000 / CONFIG.TICK_MS);
+const createEvery = Math.round(Number(opt('create-every', 60)) * 1000 / CONFIG.TICK_MS);
 
 // Stand-in for Jev (policies in the header). 'random' uses a fixed LCG so runs are repeatable.
 let rng = 12345;
@@ -74,7 +76,8 @@ const one = (seedOffset) => {
   let minMeter = Infinity;
   let decisions = 0;
   for (let t = 0; t < ticks; t++) {
-    s = W.tick(loaded, s).value;
+    const edits = createEvery ? Math.floor(t / createEvery) : 0;
+    s = W.tick(loaded, W.withCoreStats(s, { 'sonnet-edits': edits })).value;
     const o = M.toJS(s);
     const vals = Object.values(o.meters);
     if (vals.some(v => v < LOW)) slow++;
@@ -91,12 +94,14 @@ const one = (seedOffset) => {
       lastAsk = t;
     }
   }
-  return { slowPct: (100 * slow) / ticks, minMeter, decisions };
+  const low = M.toJS(s)['low-ticks'] || {};
+  return { slowPct: (100 * slow) / ticks, minMeter, decisions, low };
 };
 
 const results = Array.from({ length: runs }, (_, i) => one(i));
 const fmt = (n) => n.toFixed(1);
 console.log(`decay-scale=${scale} policy=${policy} minutes=${minutes} runs=${runs} latency=${latencyTicks} ticks gap=${gapTicks} ticks ${sets.length ? `set=${sets.join(',')}` : ''}`);
-for (const r of results) console.log(`  half-speed ${fmt(r.slowPct)}%  lowest meter ${fmt(r.minMeter)}  decisions ${r.decisions}`);
+const lowText = (low) => Object.entries(low).filter(([, v]) => v > 0).map(([m, v]) => `${m} ${fmt((100 * v) / ticks)}%`).join(', ') || 'none';
+for (const r of results) console.log(`  half-speed ${fmt(r.slowPct)}%  lowest meter ${fmt(r.minMeter)}  decisions ${r.decisions}  low: ${lowText(r.low)}`);
 const failing = results.filter(r => r.slowPct > 50).length;
 console.log(`X-1: ${failing}/${runs} runs spent most of the session at half speed → ${failing > runs / 2 ? 'FAIL' : 'pass'}`);

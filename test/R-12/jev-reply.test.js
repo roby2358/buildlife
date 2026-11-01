@@ -5,8 +5,10 @@ const assert = require('node:assert');
 const { makeGame, flush, jevReply } = require('../helpers/env');
 
 const askJev = (game, api) => {
-  while (!api.calls.some(c => c.provider === 'jev')) game.tickOnce();
-  return api.calls.find(c => c.provider === 'jev');
+  for (let i = 0; i < 100 && !api.calls.some(c => c.provider === 'jev'); i++) game.tickOnce();
+  const call = api.calls.find(c => c.provider === 'jev');
+  assert.ok(call, 'Jev was asked within 100 ticks');
+  return call;
 };
 
 test('an action outside actions is rejected', async () => {

@@ -39,8 +39,8 @@
     $('stepBtn').disabled = running || halted;
     $('haltBadge').hidden = !halted;
     const c = game.getCounters();
-    const busy = [c.inFlight.jev && 'Jev', (c.inFlight.sonnet || c.inFlight.repair) && 'Sonnet'].filter(Boolean);
-    $('counters').textContent = `v${game.getVersion()} · Jev ${c.jevCalls} · Sonnet ${c.sonnetCalls}${busy.length ? ` · thinking: ${busy.join(', ')}` : ''}${fake ? ' · FAKE MINDS' : ''}`;
+    const busy = [c.inFlight.jev && 'Jev', (c.inFlight.sonnet || c.inFlight.repair) && C.SONNET_NAME].filter(Boolean);
+    $('counters').textContent = `v${game.getVersion()} · Jev ${c.jevCalls} · ${C.SONNET_NAME} ${c.sonnetCalls}${busy.length ? ` · thinking: ${busy.join(', ')}` : ''}${fake ? ' · FAKE MINDS' : ''}`;
     $('worldStatus').textContent = halted ? 'Halted' : game.isRepairing() ? 'Repairing…' : running ? 'Running' : 'Paused';
   };
 

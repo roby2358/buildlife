@@ -33,7 +33,8 @@ test('world code can read state.core during the tick, and its writes are overwri
 
 test('decisions, invalid replies and retries are counted', async () => {
   const { game, api, BL } = makeGame();
-  while (!api.calls.length) game.tickOnce();
+  for (let i = 0; i < 100 && !api.calls.length; i++) game.tickOnce();
+  assert.strictEqual(api.calls[0].provider, 'jev');
   api.calls[0].resolve({ choices: [{ message: { content: 'nope' } }] });
   await flush();
   api.calls[1].resolve(jevReply('well'));

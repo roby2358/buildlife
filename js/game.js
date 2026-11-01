@@ -100,7 +100,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   };
 
   const startRepair = (r) => {
-    addChat('system', `Asking Sonnet to repair the world (attempt ${g.counters.repairStreak} of ${C.REPAIR_MAX}).`);
+    addChat('system', `Asking ${C.SONNET_NAME} to repair the world (attempt ${g.counters.repairStreak} of ${C.REPAIR_MAX}).`);
     emit('repair-started', { streak: g.counters.repairStreak });
     if (!api.canCall('sonnet')) {
       g.repairing = false;
@@ -125,7 +125,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
 
   const apiError = (provider, err) => {
     const message = String(err && err.message ? err.message : err);
-    addChat('error', `${provider === 'jev' ? 'Jev' : 'Sonnet'} call failed: ${message}`);
+    addChat('error', `${provider === 'jev' ? 'Jev' : C.SONNET_NAME} call failed: ${message}`);
     emit('api-error', { provider, message });
   };
 

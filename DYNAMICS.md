@@ -10,7 +10,7 @@ A small creature in a small world, guided by two minds, that is allowed to rewri
 1. **Two minds, one body.** Jev's quick choices against Sonnet's slower intentions. The interesting moments are when they disagree, or when Sonnet rewrites Jev's prompt to fix something it keeps doing.
    *Key mechanic:* the Jev call and Sonnet call rules, plus Sonnet's ability to edit `jev-system`/`jev-prompt`.
 2. **The world drifts.** The starting rules are a seed, not a law. Every edit is a small story with a reason attached.
-   *Key mechanic:* the apply-edit rule and the commented edit list.
+   *Key mechanics:* the apply-edit rule and the commented edit list, and wonder, which makes creating or improving something a need, so drift has a motive and not only a permission.
 3. **You have influence, not control.** You can persuade the inhabitant, but you can't edit its world.
    *Key mechanic:* the chat (`sendUserMessage`) reaching Sonnet, who decides what to change.
 
@@ -36,6 +36,7 @@ A small creature in a small world, guided by two minds, that is allowed to rewri
 | State reshaped so the canvas can't draw it | Defensive render contract (ONTOLOGY render contract) | R-16 |
 | Jev invents an action | Schema enum plus a check against `actions` on arrival | R-12 |
 | Jev is never asked again (cadence broken to always-false) | **Not prevented** (D-24): you see the idle inhabitant and can chat, which triggers Sonnet | — |
+| Trivial edits to keep wonder up | **Not prevented** by design (D-24, D-32); visible in the edit log | R-21 |
 | Decay set to 0, so the world becomes trivial | **Not prevented** by design (D-24): it's a legitimate outcome, logged as an edit | X-2 |
 
 ## Strategy ↔ mechanic cross-check

@@ -4,6 +4,7 @@
  * Copied from yuwakisaweb/markdown_is_a_lisp/interpreter.js. Changes from the original:
  *   - `let` special form (sequential bindings)
  *   - `and` / `or` take any number of arguments
+ *   - `eq` / `!=` no longer throw when comparing with null
  *   - an evaluation step budget per entry-point call (EVAL_STEP_LIMIT)
  *   - host built-ins for records, lists, numbers and text (setupHostLibrary)
  *   - a world loader and entry-point caller in place of the `# main` runner
@@ -412,20 +413,13 @@ const setupStandardLibrary = (env, logFn) => {
   setVar(env, '>=', (a, b) => node(a.value >= b.value));
   setVar(env, '<', (a, b) => node(a.value < b.value));
   setVar(env, '>', (a, b) => node(a.value > b.value));
-  setVar(env, '!=', (a, b) => {
-    const av = a.value, bv = b.value;
-    if (typeof av === 'object' && 'string' in av && typeof bv === 'object' && 'string' in bv) {
-      return node(av.string !== bv.string);
-    }
-    return node(av !== bv);
-  });
-  setVar(env, 'eq', (a, b) => {
-    const av = a.value, bv = b.value;
-    if (typeof av === 'object' && 'string' in av && typeof bv === 'object' && 'string' in bv) {
-      return node(av.string === bv.string);
-    }
-    return node(av === bv);
-  });
+  // BuildLife fix: the original checked `'string' in av`, which throws when a value is null.
+  const sameValue = (av, bv) => {
+    const isStr = (v) => typeof v === 'object' && v !== null && 'string' in v;
+    return isStr(av) && isStr(bv) ? av.string === bv.string : av === bv;
+  };
+  setVar(env, '!=', (a, b) => node(!sameValue(a.value, b.value)));
+  setVar(env, 'eq', (a, b) => node(sameValue(a.value, b.value)));
 
   // Logic
   setVar(env, 'and', (...args) => node(args.every(isTruthy)));
