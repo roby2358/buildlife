@@ -8,6 +8,7 @@
  *   - an evaluation step budget per entry-point call (EVAL_STEP_LIMIT)
  *   - host built-ins for records, lists, numbers and text (setupHostLibrary)
  *   - a world loader and entry-point caller in place of the `# main` runner
+ *   - compactSource: canonical compact form of a whole source
  *
  * Exposes BL.mial. Plain script, no modules (G-3).
  */
@@ -661,6 +662,10 @@ const registerDefinition = (def, globalEnv) => {
   setVar(globalEnv, def.name, makeClosure([], def.children, globalEnv));
 };
 
+// Canonical compact form of a source: each bullet's leading atoms on its own line (D-33).
+// Lines the parser ignores (prose, text before the first heading) are dropped.
+const compactSource = (text) => nodeToMarkdown(parseMarkdown(text).defs, 0, true) + '\n';
+
 const loadSource = (text) => {
   const { defs, diagnostics } = parseMarkdown(text);
   const env = createEnv(null);
@@ -727,7 +732,7 @@ const serialize = (n) => JSON.stringify(n, (k, v) => (v && v._isLambda ? node({ 
 
 BL.mial = {
   node, parseMarkdown, nodeToMarkdown, isError, isTruthy, isRecord, isList, isStringValue,
-  loadSource, callDef, fromJS, toJS, serialize, strOf, field,
+  loadSource, compactSource, callDef, fromJS, toJS, serialize, strOf, field,
   budget, EVAL_STEP_LIMIT,
 };
 

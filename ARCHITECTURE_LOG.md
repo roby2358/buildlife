@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-01: Compact MIAL everywhere
+`world/default_world.md` was rewritten in compact form (each bullet's leading atoms on its line) by the interpreter's own printer; the parsed tree is identical. The core now stores every version compact: `setSource` runs `BL.mial.compactSource` on the default world, each applied edit and each revert (D-33, R-22). `CORE_PREAMBLE` names compact as house style. Existing saves keep their text until their next version.
+
 ### 2026-11-01: The reflective mind runs on Claude Haiku 5.5
 `SONNET_MODEL` changed from `claude-sonnet-5-5` to `claude-haiku-5-5` (your call: better sized for the job, at a twentieth of the price). Removed `fallbacks: "default"` and its beta header, because Haiku 5.5 has no server-side fallback. "Sonnet" stays the role name in the MIAL entry points and code, so existing worlds keep working; the UI shows the new `SONNET_NAME` ("Haiku") (D-17).
 

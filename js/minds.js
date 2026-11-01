@@ -12,6 +12,7 @@ BL.minds = (() => {
 Your world is written in MarkdownIsALisp (MIAL), a Lisp whose syntax is Markdown:
 - "# name" starts a definition. Bullets under it form the code tree; 2 spaces of indentation = one level deeper.
 - A bullet's first word is the operator; its sub-bullets (or further words on the same line) are arguments.
+- House style is compact: put a bullet's leading atom arguments on its line ("- + a \`1\`", "- * state event"), and break out to sub-bullets from the first compound argument on. The core rewrites every saved version this way, so match it.
 - Backticks make literals: \`12\`, \`0.5\`, \`"text"\`, \`true\`, \`false\`, \`null\`. Bare words are symbols.
 - A literal cannot contain a backtick or a newline. Use the text built-in to make multi-line strings.
 - A definition whose first child is a bare symbol (one parameter), or "- *" with symbol children (several parameters), followed by a body, is a function. A single literal child is a constant. A single "- mial" child is a quoted data constant.

@@ -69,7 +69,9 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     if (g.versions.length > C.MAX_VERSIONS) g.versions.splice(1, g.versions.length - C.MAX_VERSIONS); // keep v1
   };
 
-  const setSource = (text, logEntry) => {
+  // Every new version is stored in compact form (D-33).
+  const setSource = (raw, logEntry) => {
+    const text = M.compactSource(raw);
     g.source = text;
     g.version += 1;
     g.loaded = W.load(text);

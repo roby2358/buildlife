@@ -370,10 +370,11 @@ parsed = parse(edit.source)
 if parsed has 0 defs and edit.delete is empty: reject, tell Sonnet the parse diagnostics
 text = WorldSource with each parsed def replacing its same-named def (or appended),
        and each name in delete removed
+text = compact(text)        # every stored version, including the default world and reverts (D-33)
 version += 1; snapshot; editLog.push; chat edit{comment, names}; save
 reload definitions before the next tick
 ```
-There's no behavior check. A broken world is the repair rule's job (G-5).
+`compact` reprints the parsed definitions with each bullet's leading atoms on its line, breaking out at the first compound child (the upstream interpreter's compact printer). The tree is unchanged; lines the parser ignores are dropped. There's no behavior check. A broken world is the repair rule's job (G-5).
 
 ### 4.11 Repair *(core)* [D]
 *Serves:* G-5.

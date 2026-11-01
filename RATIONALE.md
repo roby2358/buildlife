@@ -119,6 +119,11 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Evidence:** `Measured by:` a live session's console log. Refusals were frequent, and the response `msg_011CgbFMdgYXktba9SucKhcg` had `stop_details.category: "reasoning_extraction"`, on a request whose schema asked for `thought: your private reflection (shown to the neighbour as your thinking)`. The fix's effect on the refusal rate hasn't been measured yet.
 - G-4 legibility is kept: the chat shows the reply's `summary` plus the summarized thinking.
 
+### D-33 Every stored version is canonical compact MIAL — *Decided*
+- **Alternatives:** keep whatever text the models write (mixed styles accumulate); compact only the default world (edits drift back to expanded); a style rule in the preamble alone (nothing enforces it).
+- **Why:** Your call. One style keeps the source uniform for the minds and for you, and it's shorter: the default world went from 646 to 553 lines and 11,567 to 10,990 characters, with an identical parsed tree (`compactSource` round-trip, R-22). The preamble names compact as house style so edits arrive in it, and the core reprints every version regardless.
+- **Cost:** comments or prose lines in an edit are dropped (the parser ignored them anyway). The first save after the switch rewrites the cached system block once.
+
 ### D-32 Wonder: a fifth need that only creating or improving refills — *Decided*
 - **Alternatives:** aspirations in `sonnet-system` only (a prompt the mind can edit away silently); world pressure only (seasons, decay of structures), which gives problems but no drive to make things; challenges from you in chat, which depend on you; a core-fixed goal or score, which cuts against the rules belonging to the inhabitant.
 - **Why:** In a stable world, Sonnet had no reason to change anything: "chop wood, carry water." Making creativity a need puts making things inside the survival loop it already understands. It's measured by a core fact (`core.sonnet-edits`), so the world doesn't trust its own say-so, and it needs no core change.

@@ -25,31 +25,18 @@
 # DECAY
 - mial
   - record
-    - food
-      - `0.15`
-    - water
-      - `0.24`
-    - rest
-      - `0.09`
-    - wood
-      - `0.1`
-    - wonder
-      - `0.05`
+    - food `0.15`
+    - water `0.24`
+    - rest `0.09`
+    - wood `0.1`
+    - wonder `0.05`
 
 # structure
-- *
-  - name
-  - x
-  - y
-  - meter
-  - rate
+- * name x y meter rate
 - record `"name"` name `"x"` x `"y"` y `"meter"` meter `"rate"` rate
 
 # initial-state
-- record
-  - `"tick"`
-  - `0`
-  - `"grid"`
+- record `"tick"` `0` `"grid"`
   - record `"w"` GRID_W `"h"` GRID_H
   - `"structures"`
   - list
@@ -77,19 +64,14 @@
     - `0`
 
 # emit
-- *
-  - state
-  - event
+- * state event
 - put state `"events"`
   - append
     - get state `"events"`
     - list event
 
 # set-inhabitant
-- *
-  - state
-  - key
-  - value
+- * state key value
 - put state `"inhabitant"`
   - put
     - get state `"inhabitant"`
@@ -97,9 +79,7 @@
     - value
 
 # go-idle
-- *
-  - state
-  - reason
+- * state reason
 - emit
   - set-inhabitant
     - set-inhabitant state `"status"` `"idle"`
@@ -112,8 +92,7 @@
 - >
   - length
     - filter
-      - lambda
-        - m
+      - lambda m
         - <
           - get meters m
           - LOW_THRESHOLD
@@ -131,12 +110,9 @@
 - meters
 - reduce
   - lambda
-    - *
-      - acc
-      - m
+    - * acc m
     - put acc m
-      - max
-        - `0`
+      - max `0`
         - -
           - get acc m
           - get DECAY m
@@ -144,17 +120,12 @@
   - keys meters
 
 # crossings
-- *
-  - old
-  - new
-  - kind
+- * old new kind
 - map
-  - lambda
-    - m
+  - lambda m
     - record `"type"` kind `"meter"` m
   - filter
-    - lambda
-      - m
+    - lambda m
       - if
         - eq kind `"low"`
         - and
@@ -174,22 +145,17 @@
     - keys new
 
 # count-low
-- *
-  - counts
-  - meters
+- * counts meters
 - reduce
   - lambda
-    - *
-      - acc
-      - m
+    - * acc m
     - if
       - <
         - get meters m
         - LOW_THRESHOLD
       - put acc m
         - +
-          - max
-            - `0`
+          - max `0`
             - get acc m
           - `1`
       - acc
@@ -197,15 +163,12 @@
   - keys meters
 
 # find-structure
-- *
-  - state
-  - name
+- * state name
 - let
   - vars
     - found
       - filter
-        - lambda
-          - s
+        - lambda s
           - eq
             - get s `"name"`
             - name
@@ -216,9 +179,7 @@
     - car found
 
 # adjacent?
-- *
-  - inh
-  - s
+- * inh s
 - and
   - <=
     - abs
@@ -234,9 +195,7 @@
     - `1`
 
 # step-toward
-- *
-  - inh
-  - s
+- * inh s
 - let
   - vars
     - dx
@@ -261,9 +220,7 @@
         - sign dy
 
 # walk
-- *
-  - inh
-  - s
+- * inh s
 - if
   - adjacent? inh s
   - put
@@ -291,8 +248,7 @@
     - inh
       - get state `"inhabitant"`
     - s
-      - find-structure
-        - state
+      - find-structure state
         - get inh `"goal"`
   - if
     - null? s
@@ -314,10 +270,7 @@
           - get moved `"status"`
           - `"using"`
         - emit next
-          - record
-            - `"type"`
-            - `"arrived"`
-            - `"goal"`
+          - record `"type"` `"arrived"` `"goal"`
             - get s `"name"`
         - next
 
@@ -326,8 +279,7 @@
 - let
   - vars
     - s
-      - find-structure
-        - state
+      - find-structure state
         - get
           - get state `"inhabitant"`
           - `"goal"`
@@ -341,8 +293,7 @@
         - meters
           - get state `"meters"`
         - value
-          - min
-            - METER_MAX
+          - min METER_MAX
             - +
               - get meters meter
               - get s `"rate"`
@@ -396,8 +347,7 @@
         - > edits seen
     - noted
       - put state `"seen-edits"` edits
-  - if
-    - created
+  - if created
     - emit
       - put noted `"meters"`
         - put
@@ -443,16 +393,13 @@
 - state
 - append
   - map
-    - lambda
-      - s
+    - lambda s
       - get s `"name"`
     - get state `"structures"`
   - list `"idle"`
 
 # apply-action
-- *
-  - state
-  - action
+- * state action
 - if
   - eq action `"idle"`
   - set-inhabitant
@@ -484,9 +431,7 @@
     - eq type `"idle"`
 
 # jev-trigger?
-- *
-  - state
-  - events
+- * state events
 - or
   - >
     - length
@@ -505,10 +450,7 @@
       - `1`
 
 # sonnet-trigger?
-- *
-  - state
-  - events
-  - since
+- * state events since
 - or
   - >= since SONNET_EVERY_N_JEV
   - and
@@ -523,16 +465,12 @@
 - meters
 - join
   - map
-    - lambda
-      - m
-      - +
-        - m
-        - `": "`
+    - lambda m
+      - + m `": "`
         - round
           - get meters m
     - filter
-      - lambda
-        - m
+      - lambda m
         - != m `"wonder"`
       - keys meters
   - `", "`
@@ -541,8 +479,7 @@
 - state
 - join
   - map
-    - lambda
-      - s
+    - lambda s
       - +
         - get s `"name"`
         - `" at "`
@@ -558,11 +495,8 @@
 - e
 - join
   - map
-    - lambda
-      - k
-      - +
-        - k
-        - `"="`
+    - lambda k
+      - + k `"="`
         - str
           - get e k
     - keys e
@@ -580,33 +514,19 @@
 - `""`
 
 # jev-system
-- text
-  - `"You are the quick, instinctive mind of a small inhabitant living on a tiny grid world."`
-  - `"The world has a bush (food), a well (water), a shack (rest) and a tree (wood)."`
-  - `"Each need slowly drains. If any need falls below the low threshold, you move at half speed."`
-  - `"Choose the single next action that best keeps every need healthy."`
-  - `"Prefer the lowest need, but weigh walking distance: a nearby refill is cheap."`
-  - `"Reply only with JSON: a one-sentence thought and the action."`
+- text `"You are the quick, instinctive mind of a small inhabitant living on a tiny grid world."` `"The world has a bush (food), a well (water), a shack (rest) and a tree (wood)."` `"Each need slowly drains. If any need falls below the low threshold, you move at half speed."` `"Choose the single next action that best keeps every need healthy."` `"Prefer the lowest need, but weigh walking distance: a nearby refill is cheap."` `"Reply only with JSON: a one-sentence thought and the action."`
 
 # jev-prompt
-- *
-  - state
-  - history
+- * state history
 - let
   - vars
     - inh
       - get state `"inhabitant"`
   - text
-    - +
-      - `"Needs (max "`
-      - METER_MAX
-      - `", low below "`
-      - LOW_THRESHOLD
-      - `"): "`
+    - + `"Needs (max "` METER_MAX `", low below "` LOW_THRESHOLD `"): "`
       - describe-meters
         - get state `"meters"`
-    - +
-      - `"You are at "`
+    - + `"You are at "`
       - get inh `"x"`
       - `","`
       - get inh `"y"`
@@ -614,31 +534,19 @@
       - get inh `"status"`
       - `", goal: "`
       - get inh `"goal"`
-    - +
-      - `"Places: "`
+    - + `"Places: "`
       - describe-places state
     - `"Recent events:"`
     - describe-history history
-    - +
-      - `"Notes from your reflective self: "`
-      - jev-notes
+    - + `"Notes from your reflective self: "` jev-notes
     - `"Choose your next action."`
 
 # sonnet-system
-- text
-  - `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."`
-  - `"A quick instinctive mind called Jev picks moment-to-moment actions. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."`
-  - `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."`
-  - `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."`
-  - `"To remember something across reflections, write it into a definition such as notes and refer to it from your own prompt."`
-  - `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like them it slows you to half speed when low. Nothing in the world refills it: only creating something new or improving something that exists, through an edit. Any reflection that makes an edit fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."`
+- text `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."` `"A quick instinctive mind called Jev picks moment-to-moment actions. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."` `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."` `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."` `"To remember something across reflections, write it into a definition such as notes and refer to it from your own prompt."` `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like them it slows you to half speed when low. Nothing in the world refills it: only creating something new or improving something that exists, through an edit. Any reflection that makes an edit fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."`
 
 # sonnet-prompt
-- *
-  - state
-  - history
-- text
-  - `"Current world state:"`
+- * state history
+- text `"Current world state:"`
   - str state
   - `"Recent events and decisions:"`
   - describe-history history
