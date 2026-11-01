@@ -82,8 +82,17 @@ const check = (id, ok, detail) => {
   await page.waitForTimeout(300);
   const pond = await page.evaluate(() => BL.app.game.getRenderData().structures.some(s => s.name === 'pond'));
   const after = await page.evaluate(() => document.getElementById('world').toDataURL());
-  check('U-7', pond && before !== after, 'new structure "pond" appears in render data and on the canvas');
   await page.screenshot({ path: path.join(SHOTS, 'new-structure.png') });
+  // Giving it an emoji through EMOJI redraws it.
+  await page.evaluate(() => {
+    const src = BL.app.game.getSource().match(/# EMOJI\n[\s\S]*?(?=\n# |$)/)[0].trimEnd();
+    BL.app.game.applyEdit({ comment: 'test: pond emoji', source: src + '\n    - pond `"🦆"`\n' });
+  });
+  await page.waitForTimeout(300);
+  const withEmoji = await page.evaluate(() => document.getElementById('world').toDataURL());
+  const pondEmoji = await page.evaluate(() => BL.app.game.getRenderData().emoji.pond);
+  check('U-7', pond && before !== after && pondEmoji === '🦆' && withEmoji !== after, 'new "pond" drawn generic, then redrawn as its emoji after an EMOJI edit');
+  await page.screenshot({ path: path.join(SHOTS, 'new-structure-emoji.png') });
 
   // Edit list: version, author, time, comment, names, revert buttons, no diff.
   await page.click('.tab[data-tab="edits"]');

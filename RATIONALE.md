@@ -67,7 +67,8 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Alternatives:** turn-based; turn-based with manual steps.
 - **Why:** The alive quality. Slow thinking costs something real. A `step()` command exists for debugging while paused.
 
-### D-9 Canvas with simple shapes, 12×12 grid — *Decided (canvas) / Proposed (size)*
+### D-9 Canvas, 12×12 grid — *Decided (canvas) / Proposed (size)*
+- Places and the inhabitant are drawn as emoji (D-35); hand-drawn shapes remain only as the fallback.
 - **Why:** Small enough that walking from one structure to another takes seconds, not minutes.
 
 ### D-10 Pressure numbers — *Decided (pressure level) / tuned by X-1*
@@ -80,6 +81,13 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Evidence for the current values:** `Measured by: node tools/tune.js --runs 3 --policy smart|lowest|random` → smart: 0% at half speed, lowest need ≈ 42; lowest: about 1% (water); random: 80–89% (74–89% after 2026-11-01, when wood stopped slowing). With `--create-every 600` (a creation only every 10 minutes), `smart` is slow 72% because wonder runs out and half speed drags every need down.
 - **Not measured:** the real Jev's latency and choices, and how often the real Sonnet creates.
 - The other numbers (TICK_MS, BASE_SPEED, LOW_THRESHOLD, grid size) are unmeasured first guesses.
+
+### D-35 Map icons are emoji the models choose — *Decided*
+- **Intent:** you asked for emoji on the map, with the inhabitant picking one for anything it adds and free to change existing ones. That gives creation a visible signature (G-2) at no cost to the "core encodes no world rule" invariant.
+- **Where it lives:** a MIAL constant `EMOJI` (name → emoji), read by the core like SLOWING_METERS. A structure record may also carry its own `emoji` field, which wins. A constant rather than only a state field so an edit takes effect at once, without rewriting the running state or starting a new game.
+- **Guard:** the renderer draws only the first grapheme, so an emoji field can't spill text across the map. No other validation (D-6).
+- **Fallback:** no emoji means the old generic grey square, so a forgetful edit still shows the place.
+- **Alternatives:** keep the bespoke canvas shapes (rejected: the models couldn't restyle them without a core change); add an emoji argument to `structure` (rejected: breaks every existing call and model-written world).
 
 ### D-34 Walking costs food, water and rest per tile — *Decided (costs those three) / tuned by X-1 (0.2)*
 - **Intent:** you asked that moving cost rest, food and water. Before this, walking was free apart from time, so the bush, well and shack being far apart only mattered as decay during the trip.

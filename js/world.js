@@ -139,7 +139,8 @@ BL.world = (() => {
       const x = num(child(s, 'x'));
       const y = num(child(s, 'y'));
       if (x === undefined || y === undefined) continue;
-      out.structures.push({ name: text(child(s, 'name')) || '?', x, y });
+      const emoji = text(child(s, 'emoji'));
+      out.structures.push({ name: text(child(s, 'name')) || '?', x, y, ...(emoji ? { emoji } : {}) });
     }
     if (!M.isList(structures)) warnings.push('structures missing');
 
@@ -173,6 +174,20 @@ BL.world = (() => {
     return r.ok && M.isRecord(r.value) ? r.value.children.map(f => f.value) : undefined;
   };
 
+  // EMOJI is MIAL-owned: a record of name → emoji string for the map (structures and `inhabitant`).
+  // Non-string values are dropped; an empty object if it is missing or not a record.
+  const emojiMap = (loaded) => {
+    const r = M.callDef(loaded, 'EMOJI', []);
+    const out = {};
+    if (r.ok && M.isRecord(r.value)) {
+      for (const f of r.value.children) {
+        const v = text(f.children[0]);
+        if (v) out[f.value] = v;
+      }
+    }
+    return out;
+  };
+
   // The reserved `core` field: facts only the core knows, overwritten by the core every tick.
   // Always the last field, so the volatile numbers sit at the end of anything that renders
   // the state into a prompt. Any other state shape passes through untouched (the repair rule
@@ -198,5 +213,5 @@ BL.world = (() => {
     return out;
   };
 
-  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, slowingMeters, withCoreStats, statsData };
+  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, slowingMeters, emojiMap, withCoreStats, statsData };
 })();

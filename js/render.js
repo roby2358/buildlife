@@ -1,4 +1,6 @@
-// Canvas drawing from the render contract (getRenderData). Simple shapes only (D-9).
+// Canvas drawing from the render contract (getRenderData). Places and the inhabitant are emoji
+// chosen in the world MIAL (EMOJI, or a structure's own emoji field); anything without one is a
+// generic shape (D-9, D-35).
 var BL = window.BL = window.BL || {};
 
 BL.createRenderer = (canvas) => {
@@ -7,8 +9,7 @@ BL.createRenderer = (canvas) => {
 
   const COLORS = {
     ground: '#6aa84f', grid: '#5f9a46', label: '#16260f',
-    leaf: '#2f6e30', berry: '#e2506a', water: '#4a9be8', stone: '#8a8f99',
-    wood: '#8a5a32', roof: '#b0533c', trunk: '#6b4423', other: '#7d8590',
+    other: '#7d8590',
     body: '#ffb347', eye: '#1c1f26', goal: 'rgba(255, 255, 255, 0.65)',
   };
 
@@ -19,33 +20,25 @@ BL.createRenderer = (canvas) => {
     ctx.fill();
   };
 
-  const shapes = {
-    bush: (cx, cy, r) => {
-      circle(cx, cy, r * 0.8, COLORS.leaf);
-      for (const [dx, dy] of [[-0.3, -0.2], [0.25, -0.3], [0.1, 0.25], [-0.25, 0.3]]) circle(cx + dx * r, cy + dy * r, r * 0.13, COLORS.berry);
-    },
-    well: (cx, cy, r) => {
-      circle(cx, cy, r * 0.8, COLORS.stone);
-      circle(cx, cy, r * 0.55, COLORS.water);
-    },
-    shack: (cx, cy, r) => {
-      ctx.fillStyle = COLORS.wood;
-      ctx.fillRect(cx - r * 0.65, cy - r * 0.15, r * 1.3, r * 0.85);
-      ctx.fillStyle = COLORS.roof;
-      ctx.beginPath();
-      ctx.moveTo(cx - r * 0.85, cy - r * 0.1);
-      ctx.lineTo(cx, cy - r * 0.85);
-      ctx.lineTo(cx + r * 0.85, cy - r * 0.1);
-      ctx.fill();
-    },
-    tree: (cx, cy, r) => {
-      ctx.fillStyle = COLORS.trunk;
-      ctx.fillRect(cx - r * 0.12, cy + r * 0.1, r * 0.24, r * 0.7);
-      circle(cx, cy - r * 0.15, r * 0.65, COLORS.leaf);
-    },
+  // One grapheme only, so a model can't paint a sentence across the map.
+  const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter() : null;
+  const firstGrapheme = (str) => {
+    if (typeof str !== 'string' || !str.trim()) return '';
+    if (!segmenter) return Array.from(str.trim())[0];
+    const it = segmenter.segment(str.trim())[Symbol.iterator]().next();
+    return it.done ? '' : it.value.segment;
   };
 
-  // Structures the models invent get a generic labelled square (U-7).
+  const emoji = (ch, cx, cy, r) => {
+    ctx.save();
+    ctx.font = `${r * 1.5}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ch, cx, cy);
+    ctx.restore();
+  };
+
+  // A place with no emoji gets a generic labelled square (U-7).
   const generic = (cx, cy, r) => {
     ctx.fillStyle = COLORS.other;
     ctx.beginPath();
@@ -97,7 +90,9 @@ BL.createRenderer = (canvas) => {
     ctx.font = `${Math.max(10, tile * 0.24)}px system-ui, sans-serif`;
     ctx.textAlign = 'center';
     for (const s of data.structures) {
-      (shapes[s.name] || generic)(center(s.x), center(s.y), tile * 0.5);
+      const ch = firstGrapheme(s.emoji || (data.emoji || {})[s.name]);
+      if (ch) emoji(ch, center(s.x), center(s.y), tile * 0.5);
+      else generic(center(s.x), center(s.y), tile * 0.5);
       ctx.fillStyle = COLORS.label;
       ctx.fillText(s.name, center(s.x), center(s.y) + tile * 0.72);
     }
@@ -105,9 +100,13 @@ BL.createRenderer = (canvas) => {
     if (inh) {
       const x = center(shown.x);
       const y = center(shown.y);
-      circle(x, y, tile * 0.3, COLORS.body);
-      circle(x - tile * 0.1, y - tile * 0.05, tile * 0.045, COLORS.eye);
-      circle(x + tile * 0.1, y - tile * 0.05, tile * 0.045, COLORS.eye);
+      const ch = firstGrapheme((data.emoji || {}).inhabitant);
+      if (ch) emoji(ch, x, y, tile * 0.45);
+      else {
+        circle(x, y, tile * 0.3, COLORS.body);
+        circle(x - tile * 0.1, y - tile * 0.05, tile * 0.045, COLORS.eye);
+        circle(x + tile * 0.1, y - tile * 0.05, tile * 0.045, COLORS.eye);
+      }
     }
   };
 

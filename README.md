@@ -15,7 +15,8 @@ whose syntax is Markdown bullets, and the inhabitant's own minds can rewrite the
   won't do it.
 
 The JavaScript core is fixed. If the inhabitant wants a core change, it asks you nicely in chat.
-In its first trial run, it built itself a storehouse.
+In its first trial run, it built itself a storehouse. Everything on the map is an emoji, and the
+inhabitant picks the emoji for whatever it builds (or restyles the ones it has).
 
 ## Run it
 

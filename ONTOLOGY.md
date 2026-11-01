@@ -76,7 +76,7 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | core | CoreStats | **Reserved, core-owned, always the last field.** Written by the core before and after every tick; anything the MIAL writes there is overwritten [D] |
 | *(anything else)* | any | Room for the models to invent new state |
 
-**Render contract** [P]: `grid.w`, `grid.h`, `structures[].name/x/y`, `inhabitant.x/y/goal`, `meters.*`. JS reads these with the same `get` built-in. A missing field is skipped and shows a warning badge, so it never crashes the page.
+**Render contract** [P]: `grid.w`, `grid.h`, `structures[].name/x/y` (and optional `structures[].emoji`), `inhabitant.x/y/goal`, `meters.*`, plus the MIAL constant `EMOJI` (a record, name → emoji; `inhabitant` names the inhabitant's). A place is drawn as its own `emoji` field, else `EMOJI[name]`, else a generic labelled square; only the first grapheme is drawn (D-35). JS reads these with the same `get` built-in. A missing field is skipped and shows a warning badge, so it never crashes the page.
 
 ### 1.3a CoreStats [D]
 *Serves:* G-1, G-4. These are facts only the core knows, so a reflection can judge changes by numbers. The inhabitant asked for this through a core request. World facts (such as time spent low) are deliberately not here, because what counts as "low" is a world rule (D-29).
@@ -443,6 +443,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | BASE_SPEED | 0.25 | tiles per tick | D-10 |
 | SLOW_FACTOR | 0.5 | × speed | D-2 |
 | SLOWING_METERS | food, water, rest, wonder | record keys | D-2 |
+| EMOJI | bush 🫐, well 🪣, shack 🛖, tree 🌳, inhabitant 🧑 | record, name → emoji | D-35 |
 | MOVE_COST | food 0.2, water 0.2, rest 0.2 | per tile walked | D-34 |
 | RATE (bush, well) | 1 | per tick | D-10 |
 | RATE (shack) | 0.5 | per tick | D-10 |

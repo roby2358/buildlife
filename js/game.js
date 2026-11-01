@@ -408,7 +408,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     getSettings: () => ({ ...g.settings }),
     getEventHistory: () => g.eventHistory,
     getStatsData: () => W.statsData(g.state),
-    getRenderData: () => ({ ...W.renderData(g.state, g.loaded ? W.lowThreshold(g.loaded) : undefined), slowingMeters: g.loaded ? W.slowingMeters(g.loaded) : undefined }),
+    getRenderData: () => ({ ...W.renderData(g.state, g.loaded ? W.lowThreshold(g.loaded) : undefined), slowingMeters: g.loaded ? W.slowingMeters(g.loaded) : undefined, emoji: g.loaded ? W.emojiMap(g.loaded) : {} }),
     isHalted: () => g.halted,
     isRunning: () => g.running,
     isRepairing: () => g.repairing,

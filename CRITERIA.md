@@ -27,6 +27,7 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-19 | Default world with some meters below LOW_THRESHOLD; a state with no `low-ticks` record | `low-ticks` counts one per tick for each meter below LOW_THRESHOLD, starting from zero (or from nothing for an older state) | automated |
 | R-20 | Sonnet replies: a refusal with `stop_details`; a reply with a summary and summarized thinking blocks; the built request | A refusal goes to chat as an error naming its category and explanation, with no change. The summary and the thinking summary appear together as one Sonnet entry. Requests ask for `thinking: {adaptive, summarized}`, and neither the schema nor the core preamble asks for reasoning in the reply text | automated |
 | R-21 | Default world: ticks with and without a rise in `core.sonnet-edits`; Jev's prompt | Wonder drains by its DECAY. The first tick only notes the edit count. A later rise, from any number of edits, fills wonder to METER_MAX and emits `created`; then it drains again. Jev's needs line doesn't mention wonder | automated |
+| R-24 | Default world; an EMOJI edit changing one and adding one; a structure with its own `emoji` field; EMOJI not a record, or deleted | Every default place and the inhabitant has an emoji. The edit shows in `getRenderData().emoji`. The structure's emoji reaches render data. A bad or missing EMOJI gives an empty map, never a throw | automated |
 | R-23 | Default world: walking 5 tiles to the well vs. an idle twin; walking with food, water and rest near 0 | The walker has paid exactly 5 × MOVE_COST more food, water and rest, and nothing more of wood or wonder. Meters stay ≥ 0 | automated |
 | R-22 | The default world, an edit written in expanded form, and literals of every kind | Every stored version (and its snapshot) is the compact form of its source: a bullet's leading atoms share its line. The parsed tree is unchanged | automated |
 
@@ -42,7 +43,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 | U-4 | Each chat kind (user, inhabitant, jev, sonnet-thought, edit, core-request, error, system) is visually distinct. Core requests are highlighted | automated |
 | U-5 | The edit list shows version, author, time, comment, and the names touched, with no diff | automated |
 | U-6 | The toolbar has play/pause/step, new game, download MIAL, settings (keys), factory reset, and call counters | automated |
-| U-7 | Structures the models add appear on the canvas as generic labelled shapes | automated |
+| U-7 | Places and the inhabitant are drawn as their emoji. A structure the models add with no emoji appears as a generic labelled shape, and an EMOJI edit redraws it as its emoji | automated |
 | U-8 | The Stats button opens a dialog showing the core stats and each world stats record | automated |
 
 ## X — Experience
@@ -57,7 +58,7 @@ Checked by `node test/browser.js` (Chromium via Playwright, `?fake` minds, file:
 
 ## Status
 
-2026-11-01. `npm test` covers R-1 to R-23, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
+2026-11-01. `npm test` covers R-1 to R-24, plus the coverage test, an embed check, and a settings unit test. `node test/browser.js` covers U-1 to U-8. Both pass.
 
 **X-rows (playtest only):** X-1 is measured only with stand-in policies (`tools/tune.js`, see D-10). X-2 to X-5 need sessions with real keys.
 
