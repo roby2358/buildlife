@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-01: JEV_MAX_TOKENS 400 → 1024
+The inhabitant asked for it in chat: a Jev decision was cut off mid-JSON at 400 tokens, so the retry had to fire. Raised to 1024 (your call, over the first 600); the retry stays (D-28).
+
 ### 2026-11-01: Emoji on the map
 Places and the inhabitant are now drawn as emoji instead of canvas shapes (your call). New MIAL record EMOJI (bush 🫐, well 🪣, shack 🛖, tree 🌳, inhabitant 🧑); a structure's own `emoji` field wins over it. The core reads it through `BL.world.emojiMap`, and `getRenderData()` carries `emoji`. Anything without an emoji keeps the generic square. The reflective mind's prompt tells it to give new places an emoji and that it may change any (D-35, R-24, U-7).
 

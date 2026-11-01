@@ -119,6 +119,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ### D-28 Retry a malformed or cut-off Jev reply once — *Decided*
 - **Alternatives:** no retry (the original rule), which costs a decision; retry until valid, which loops on a persistent fault; raising JEV_MAX_TOKENS instead (the error now says when a reply was cut off at the limit, so that can be judged from evidence).
+- **JEV_MAX_TOKENS 400 → 1024 (2026-11-01):** a live Jev decision was cut off mid-JSON at 400 and needed the retry. The inhabitant asked for a little more; you chose 1024 for comfortable headroom. The retry stays as the backstop.
 - **Why:** The inhabitant asked for it after losing a decision. One retry recovers transient faults, and a second failure is reported, never looped. An unknown action isn't retried, because the schema enum makes it a model error, not noise.
 
 ### D-29 Stats are split by who knows them: core facts in `state.core`, world facts in MIAL — *Decided*

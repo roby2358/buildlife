@@ -464,7 +464,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | CHAT_HISTORY_N | 20 | entries | D-7 |
 | SAVE_EVERY_TICKS | 20 | ticks | D-11 |
 | SONNET_MAX_TOKENS | 16000 | tokens | D-7 |
-| JEV_MAX_TOKENS | 400 | tokens | D-7 |
+| JEV_MAX_TOKENS | 1024 | tokens | D-28 |
 | MAX_CHAT | 500 | chat entries kept | D-11 |
 | MAX_VERSIONS | 200 | snapshots kept (v1 always) | D-22 |
 | JEV_MODEL | `typesafe/jev-router` | | D-17 |
