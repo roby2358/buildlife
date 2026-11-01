@@ -1,31 +1,44 @@
 # BuildLife
 
-A tiny world, with a bush, a shack, a well, a tree and one inhabitant, whose rules are written in
-[MarkdownIsALisp](../yuwakisaweb/markdown_is_a_lisp) and rewritten by the minds that drive it.
-Jev (`typesafe/jev-router` on OpenRouter) picks moment-to-moment actions. Claude Sonnet reflects,
-talks with you, and edits the world MIAL, including both models' prompts.
+A very small world: a bush, a well, a shack, a tree, and one inhabitant. The inhabitant gets
+hungry, thirsty, tired, short on wood, and short on *wonder*. If a need drops too low, it trudges
+at half speed. Nothing worse ever happens. We're not monsters.
 
-## Run
+The twist is that the world's rules aren't fixed. They're written in
+[MarkdownIsALisp](https://github.com/roby2358/yuwakisaweb/tree/main/markdown_is_a_lisp), a Lisp
+whose syntax is Markdown bullets, and the inhabitant's own minds can rewrite them while it runs.
 
-Double-click `index.html` (it works from `file://`; no server, no build). Open **Settings** and add
-an Anthropic key (Sonnet) and an OpenRouter key (Jev), then press **Play**.
+- **Jev** (`typesafe/jev-router` on OpenRouter) is the fast mind. It decides where to walk next.
+- **Claude Haiku** is the slow mind. It reflects, chats with you, edits the world, and rewrites
+  both minds' prompts.
+- **Wonder** refills only when the inhabitant makes or improves something. Chopping wood forever
+  won't do it.
 
-To look around without keys, open `index.html?fake`. That uses stand-in minds and doesn't touch
-your real save.
+The JavaScript core is fixed. If the inhabitant wants a core change, it asks you nicely in chat.
+In its first trial run, it built itself a storehouse.
 
-## Develop
+## Run it
+
+Double-click `index.html`. There's no server or build step. Open **Settings**, paste in an
+Anthropic key and an OpenRouter key, then press **Play**. Keys stay in your browser.
+
+No keys? Open `index.html?fake` to watch stand-in minds bumble about.
+
+Use **Download MIAL** to keep the world as it currently stands. Each edit has a **revert** button
+if things go sideways.
+
+## Tinker
 
 | Command | What it does |
 |---|---|
-| `npm test` | Headless tests: one directory per rule in `test/R-n/` (see CRITERIA.md), plus the coverage test |
-| `node test/browser.js` | Checks the UI criteria in Chromium and writes screenshots to `test/screenshots/` (needs `npm install`) |
-| `node tools/tune.js [--decay-scale 2.5] [--policy lowest\|smart\|random] [--set NAME=value]` | Soak harness: time spent at half speed with stand-in minds |
-| `npm run embed` | Regenerates `js/world_default.js` after editing `world/default_world.md` |
+| `npm test` | Headless rule tests, one folder per rule in `test/R-n/` |
+| `node test/browser.js` | UI check in headless Chromium, with screenshots |
+| `node tools/tune.js --policy smart` | Soak test: how often a sensible inhabitant is slowed |
+| `npm run embed` | Rebuilds `js/world_default.js` after you edit `world/default_world.md` |
 
-## Docs
+The design docs explain the rest. [ONTOLOGY](ONTOLOGY.md) says what it is,
+[RATIONALE](RATIONALE.md) why it's that way, [CRITERIA](CRITERIA.md) how it's checked,
+[DYNAMICS](DYNAMICS.md) why it's fun to watch, and [ARCHITECTURE_LOG](ARCHITECTURE_LOG.md) what
+changed and when.
 
-- [ONTOLOGY.md](ONTOLOGY.md): the implementation reference (entities, rules, the MIAL contract, commands and events, numbers)
-- [CRITERIA.md](CRITERIA.md): rule, UI and experience criteria, and their coverage
-- [RATIONALE.md](RATIONALE.md): why each decision was made, with evidence
-- [DYNAMICS.md](DYNAMICS.md): why it's worth watching
-- [ARCHITECTURE_LOG.md](ARCHITECTURE_LOG.md): what changed and when
+MIT licensed.
