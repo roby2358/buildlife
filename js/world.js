@@ -166,6 +166,13 @@ BL.world = (() => {
     return r.ok && typeof r.value.value === 'number' ? r.value.value : undefined;
   };
 
+  // SLOWING_METERS is MIAL-owned too: a record whose keys are the meters that count toward half
+  // speed, used only for the "slow" badge. Undefined (every meter counts) unless it is a record.
+  const slowingMeters = (loaded) => {
+    const r = M.callDef(loaded, 'SLOWING_METERS', []);
+    return r.ok && M.isRecord(r.value) ? r.value.children.map(f => f.value) : undefined;
+  };
+
   // The reserved `core` field: facts only the core knows, overwritten by the core every tick.
   // Always the last field, so the volatile numbers sit at the end of anything that renders
   // the state into a prompt. Any other state shape passes through untouched (the repair rule
@@ -191,5 +198,5 @@ BL.world = (() => {
     return out;
   };
 
-  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, withCoreStats, statsData };
+  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, slowingMeters, withCoreStats, statsData };
 })();

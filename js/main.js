@@ -59,16 +59,16 @@
       box.dataset.names = names.join(',');
     }
     const max = Math.max(100, ...Object.values(data.meters));
-    let anyLow = false;
+    let slow = false;
     for (const m of box.children) {
       const v = data.meters[m.dataset.meter];
       const low = data.lowThreshold !== undefined && v < data.lowThreshold;
-      anyLow = anyLow || low;
+      slow = slow || (low && (!data.slowingMeters || data.slowingMeters.includes(m.dataset.meter)));
       m.classList.toggle('low', low);
       m.querySelector('.meter-label span:last-child').textContent = Math.round(v);
       m.querySelector('.meter-fill').style.width = `${Math.max(0, Math.min(100, (100 * v) / max))}%`;
     }
-    $('slowBadge').hidden = !anyLow;
+    $('slowBadge').hidden = !slow;
     $('warnings').hidden = data.warnings.length === 0;
     $('warnings').textContent = data.warnings.length ? `Can't fully draw the state: ${data.warnings.join('; ')}` : '';
   };

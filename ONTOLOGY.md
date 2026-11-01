@@ -247,11 +247,12 @@ each tick, for each meter m:
 ```
 
 ### 4.2 Speed and slowdown *(MIAL)* [D]
-*Serves:* G-1. The **only** penalty for neglect.
+*Serves:* G-1. The **only** penalty for neglect. Any one low meter in SLOWING_METERS (food, water, rest, wonder) is enough; wood never slows the inhabitant.
 ```
 speed = BASE_SPEED
-if any meter < LOW_THRESHOLD: speed = speed * SLOW_FACTOR   # once, not per meter
+if any m in SLOWING_METERS has meters[m] < LOW_THRESHOLD: speed = speed * SLOW_FACTOR   # once, not per meter
 ```
+The UI's "slow" badge reads SLOWING_METERS (a record whose keys are the slowing meters), and falls back to every meter if it isn't a record. Bars below LOW_THRESHOLD are shaded whether or not they slow.
 
 ### 4.3 Movement *(MIAL)* [P]
 *Serves:* G-2. The open grid has no obstacles, so movement is a straight-line step.
@@ -295,7 +296,7 @@ sonnet-trigger?(state, events, since) = since >= SONNET_EVERY_N_JEV
 ```
 
 ### 4.5a Wonder *(MIAL)* [D]
-*Serves:* the motivation to create (DYNAMICS, "the world drifts"). Wonder is the fifth need. It decays like the others and counts toward the half-speed penalty. No place refills it, and Jev's needs list omits it because Jev can't act on it.
+*Serves:* the motivation to create (DYNAMICS, "the world drifts"). Wonder is the fifth need. It decays like the others and counts toward the half-speed penalty (4.2); when low it also brings Sonnet's next reflection forward. No place refills it, and Jev's needs list omits it because Jev can't act on it.
 ```
 tick(state) = feed-wonder(base-tick(state))      # base-tick is decay, act, crossings, low-ticks
 feed-wonder(state):
@@ -440,6 +441,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | DECAY.wonder | 0.05 | per tick | D-32 |
 | BASE_SPEED | 0.25 | tiles per tick | D-10 |
 | SLOW_FACTOR | 0.5 | × speed | D-2 |
+| SLOWING_METERS | food, water, rest, wonder | record keys | D-2 |
 | RATE (bush, well) | 1 | per tick | D-10 |
 | RATE (shack) | 0.5 | per tick | D-10 |
 | RATE (tree) | 2 | per tick | D-10 |

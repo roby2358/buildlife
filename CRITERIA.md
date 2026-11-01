@@ -9,7 +9,7 @@ How we know BuildLife is correct, readable, and good. Rows cite ONTOLOGY by rule
 | R-1 | The interpreter copy with host built-ins | `record`/`get`/`put`/`has?`/`keys` round-trip. `put` doesn't mutate its input. `text` joins with newlines. `let` evaluates its bindings in order. `map`/`filter`/`reduce` call closures | automated |
 | R-2 | An entry-point call that recurses forever or loops deeply | Returns a MIAL error (step budget or stack overflow), never hangs or throws out of `world.js` | automated |
 | R-3 | The default world, one tick | Every meter drops by its DECAY and is floored at 0. `low` is emitted only on the tick a meter crosses LOW_THRESHOLD | automated |
-| R-4 | The default world, one meter below LOW_THRESHOLD vs. none, and two meters below vs. one | Speed is BASE_SPEED × SLOW_FACTOR when any meter is low, and the factor is applied only once | automated |
+| R-4 | The default world: none low; each of food, water, rest, wonder low; two low; only wood low | Speed is BASE_SPEED × SLOW_FACTOR when any one of food, water, rest or wonder is low, applied only once; low wood alone leaves BASE_SPEED | automated |
 | R-5 | Inhabitant with goal `well` at a distance | It reaches the tile next to the well in ceil(distance / speed) ticks, ± 1. `arrived` fires once and status becomes `using` | automated |
 | R-6 | Using a structure | Its meter rises by rate − DECAY per tick. When it reaches METER_MAX: `full`, status `idle`, goal `idle` | automated |
 | R-7 | `apply-action` with each action in `actions` | Goal and status are set by the action rule. Neither `actions` nor `apply-action` emits an event | automated |

@@ -56,9 +56,9 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ## World
 
-### D-2 The penalty is half speed while any meter is below the threshold, applied once — *Decided (half speed) / Proposed (once, not compounding)*
-- **Alternatives:** compound per low meter (¼ speed with two low).
-- **Why:** You said "half speed with no other adverse effects." Compounding would be a second penalty.
+### D-2 The penalty is half speed while any one of food, water, rest or wonder is below the threshold, applied once — *Decided (half speed, wood exempt) / Proposed (once, not compounding)*
+- **Alternatives:** compound per low meter (¼ speed with two low); every meter counts (the first version, which included wood); bodily needs only (food, water, rest), which took the teeth out of wonder.
+- **Why:** You said "half speed with no other adverse effects." Compounding would be a second penalty. You later made wood optional: it's a resource, not a need. Wonder still slows, so a missed creation deadline costs something. The set is a MIAL record, SLOWING_METERS, so the models can change it.
 
 ### D-5 Wood starts as a fourth decaying meter, and the models may redefine it — *Decided*
 - **Why:** It keeps the four structures symmetric (one template) and gives Sonnet an obvious first thing to reinterpret.
@@ -77,7 +77,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
   - 2× decay (as first asked): the sum is 1.0, which is infeasible. Even `smart` is at half speed 91% of the time.
   - 1.5×: `smart` is slow 74%. 1.2×: `smart` 0%, lowest need ≈ 42; `random` 70–88%. 1×: `smart` 0%, lowest ≈ 56; `random` 54–68%.
   - There's a cliff between 1.2× and 1.5×. 1.2× was chosen as tight but survivable.
-- **Evidence for the current values:** `Measured by: node tools/tune.js --runs 3 --policy smart|lowest|random` → smart: 0% at half speed, lowest need ≈ 42; lowest: about 1% (water); random: 80–89%. With `--create-every 600` (a creation only every 10 minutes), `smart` is slow 72% because wonder runs out and half speed drags every need down.
+- **Evidence for the current values:** `Measured by: node tools/tune.js --runs 3 --policy smart|lowest|random` → smart: 0% at half speed, lowest need ≈ 42; lowest: about 1% (water); random: 80–89% (74–89% after 2026-11-01, when wood stopped slowing). With `--create-every 600` (a creation only every 10 minutes), `smart` is slow 72% because wonder runs out and half speed drags every need down.
 - **Not measured:** the real Jev's latency and choices, and how often the real Sonnet creates.
 - The other numbers (TICK_MS, BASE_SPEED, LOW_THRESHOLD, grid size) are unmeasured first guesses.
 

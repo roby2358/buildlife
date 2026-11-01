@@ -45,7 +45,7 @@ if (scale !== 1) {
 }
 const loaded = W.load(source);
 const constant = (n) => M.callDef(loaded, n, []).value.value;
-const LOW = constant('LOW_THRESHOLD');
+const BASE = constant('BASE_SPEED');
 
 const minutes = Number(opt('minutes', 15));
 const runs = Number(opt('runs', 5));
@@ -80,7 +80,7 @@ const one = (seedOffset) => {
     s = W.tick(loaded, W.withCoreStats(s, { 'sonnet-edits': edits })).value;
     const o = M.toJS(s);
     const vals = Object.values(o.meters);
-    if (vals.some(v => v < LOW)) slow++;
+    if (M.callDef(loaded, 'speed', [M.fromJS(o.meters)]).value.value < BASE) slow++;
     minMeter = Math.min(minMeter, ...vals);
     // jitter latency by ±1 tick so runs differ (deterministic per run)
     const lat = latencyTicks + ((t + seedOffset) % 3) - 1;

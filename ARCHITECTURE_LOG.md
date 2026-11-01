@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-01: Wood no longer slows
+Half speed now applies when any one of food, water, rest or wonder is below LOW_THRESHOLD (30); wood is optional and never slows (your call). New MIAL record SLOWING_METERS lists the slowing meters; `any-low?` checks only those. The "slow" badge reads it through `BL.world.slowingMeters`, and Jev's prompt says wood never slows. `tools/tune.js` measures half speed with the world's own `speed` definition, so it stays correct if the set changes (D-2, R-4).
+
 ### 2026-11-01: Compact MIAL everywhere
 `world/default_world.md` was rewritten in compact form (each bullet's leading atoms on its line) by the interpreter's own printer; the parsed tree is identical. The core now stores every version compact: `setSource` runs `BL.mial.compactSource` on the default world, each applied edit and each revert (D-33, R-22). `CORE_PREAMBLE` names compact as house style. Existing saves keep their text until their next version.
 
