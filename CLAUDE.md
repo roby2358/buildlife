@@ -34,13 +34,14 @@ R-n, U-n, X-n), never section numbers.
   the test resolves them.
 - `game.js` (`BL.createGame({store, api, now})`) is the controller: tick loop, model call gating, edits, repair,
   saves. It talks to the world only through MIAL entry points (`initial-state`, `tick`, `actions`, `apply-action`,
-  `jev-system`/`jev-prompt`/`jev-trigger?`, `sonnet-system`/`sonnet-prompt`/`sonnet-trigger?`), wrapped with type
+  `jev-system`/`jev-prompt`/`jev-trigger?`, `reflective-mind-system`/`reflective-mind-prompt`/`reflective-mind-trigger?`), wrapped with type
   checks in `world.js`. The UI (`main.js`) uses only game commands, queries and events.
 - Two minds: Jev (OpenRouter, JSON schema with an action enum) picks actions; the reflective mind replies with
-  `{summary, say, edits, core_request}` via structured output. Its role name in code and MIAL is "Sonnet" but it runs
+  `{summary, say, edits, run, core_request}` via structured output. In MIAL its names are `reflective-mind-*`; JS still calls it "Sonnet" but it runs
   `BL.CONFIG.SONNET_MODEL` (currently Claude Haiku); `SONNET_NAME` is the UI label. Request building and parsing,
   plus the uneditable `CORE_PREAMBLE`, are in `minds.js`; network calls in `api.js`.
 - Edits replace/append/delete whole `# definitions` with no validation; every stored version is reprinted in compact
-  form (`compactSource`) and snapshotted for revert. A MIAL error triggers the fixed repair call, halting after REPAIR_MAX.
+  form (`compactSource`) and snapshotted for revert. A reply's `run` instead calls its first definition once on the live
+  state (after the edits) and leaves the source alone. A MIAL error triggers the fixed repair call, halting after REPAIR_MAX.
 - MIAL values are trees: records are `node('record', [node(key, [value])])`, data lists are `node(null, children)`.
   `state.core` is a reserved core-written stats record, always the last field.

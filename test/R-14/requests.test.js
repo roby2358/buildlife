@@ -16,7 +16,7 @@ test('Jev request: MIAL system/user text and actions as the schema enum', () => 
   assert.deepEqual(req.body.response_format.json_schema.schema.properties.action.enum, W.actions(loaded, state).value);
 });
 
-test('Sonnet request: sonnet-system, core preamble and full source; JSON output schema', () => {
+test('Sonnet request: reflective-mind-system, core preamble and full source; JSON output schema', () => {
   const { BL, game } = makeGame();
   const W = BL.world;
   const loaded = W.load(game.getSource());
@@ -34,9 +34,9 @@ test('Sonnet request: sonnet-system, core preamble and full source; JSON output 
   assert.strictEqual(req.body.fallbacks, undefined, 'Haiku 5.5 has no server-side fallback');
 });
 
-test('the core preamble survives an edit that rewrites sonnet-system', () => {
+test('the core preamble survives an edit that rewrites reflective-mind-system', () => {
   const { BL, game } = makeGame();
-  game.applyEdit({ comment: 'terse', source: '# sonnet-system\n- `"be terse"`\n' });
+  game.applyEdit({ comment: 'terse', source: '# reflective-mind-system\n- `"be terse"`\n' });
   const loaded = BL.world.load(game.getSource());
   const req = BL.minds.buildSonnet({ loaded, state: game.getState(), history: [], chat: [], source: game.getSource(), version: 1 });
   assert.ok(req.body.system[0].text.startsWith('be terse'));

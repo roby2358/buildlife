@@ -45,7 +45,7 @@ const check = (id, ok, detail) => {
   await page.waitForSelector('.msg-inhabitant', { timeout: 15000 }).catch(() => {});
   await page.fill('#chatInput', 'Anything you would like changed in the core?');
   await page.click('#chatForm button');
-  const kinds = ['user', 'inhabitant', 'jev', 'sonnet-thought', 'edit', 'core-request'];
+  const kinds = ['user', 'inhabitant', 'jev', 'reflective-mind-thought', 'edit', 'core-request'];
   await page.waitForFunction((ks) => ks.every(k => document.querySelector(`.msg-${k}`)), kinds, { timeout: 60000 }).catch(() => {});
   const present = await page.evaluate((ks) => ks.filter(k => document.querySelector(`.msg-${k}`)), kinds);
   const styles = await page.evaluate((ks) => ks.map(k => {

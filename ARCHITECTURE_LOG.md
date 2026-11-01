@@ -2,6 +2,12 @@
 
 Newest first.
 
+### 2026-11-01: The reflective mind's MIAL names lose "sonnet"
+The role runs Claude Haiku, so every name the mind sees now says what it is (your call). Entry points `sonnet-system`, `sonnet-prompt` and `sonnet-trigger?` became `reflective-mind-system`, `reflective-mind-prompt` and `reflective-mind-trigger?`. The core stats `sonnet-calls`, `sonnet-edits` and `sonnet-runs` became `reflective-mind-calls`, `reflective-mind-edits` and `reflective-mind-runs`. The chat kind `sonnet-thought` became `reflective-mind-thought`, the event `sonnet-reply` became `reflective-mind-reply`, and the constant `SONNET_EVERY_N_JEV` became `REFLECTIVE_MIND_EVERY_N_JEV`. JS internals (`SONNET_MODEL`, `buildSonnet`, …) keep the old name. Worlds saved or downloaded before this need those definitions renamed, or a factory reset. Entries below keep the names of their time.
+
+### 2026-11-01: One-time runs
+The reflective mind's reply gains `run`: one-time MIAL functions on the live state, called after the reply's edits and then forgotten (your call, to lower the barrier to building). Prompted by the v11 world: Haiku instances had asked for restarts or invented per-tick `ensure-*` wrappers because `initial-state` only runs on a new game. New core stat `sonnet-runs`; the default world's wonder counts it like an edit; the preamble and `sonnet-system` say when to use run vs. edit `initial-state`. The fake mind does one run (D-36, R-25).
+
 ### 2026-11-01: JEV_MAX_TOKENS 400 → 1024
 The inhabitant asked for it in chat: a Jev decision was cut off mid-JSON at 400 tokens, so the retry had to fire. Raised to 1024 (your call, over the first 600); the retry stays (D-28).
 

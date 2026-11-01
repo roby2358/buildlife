@@ -3,8 +3,8 @@ var BL = window.BL = window.BL || {};
 
 BL.createChatView = ({ log, editList, editCount, onRevert }) => {
   const LABELS = {
-    user: 'you', inhabitant: 'inhabitant', jev: 'Jev', 'sonnet-thought': BL.CONFIG.SONNET_NAME,
-    edit: 'world edit', 'core-request': 'core change request', error: 'error', system: 'system',
+    user: 'you', inhabitant: 'inhabitant', jev: 'Jev', 'reflective-mind-thought': BL.CONFIG.SONNET_NAME,
+    edit: 'world edit', run: 'run once', 'core-request': 'core change request', error: 'error', system: 'system',
   };
 
   const el = (tag, className, text) => {

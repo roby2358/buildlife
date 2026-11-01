@@ -70,7 +70,7 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | structures | list of Structure | |
 | inhabitant | Inhabitant | |
 | meters | Record, name → number | Starts as `food water rest wood wonder`. **Render contract:** every key gets a bar |
-| seen-edits | number | In the default world: the `core.sonnet-edits` count the wonder rule last saw |
+| seen-edits | number | In the default world: the `core.reflective-mind-edits` count the wonder rule last saw |
 | events | list of Event | **This tick's** events only. `tick` replaces the list each call |
 | low-ticks | Record, meter → number | In the default world: ticks each meter has spent below `LOW_THRESHOLD` (the low-ticks rule). World-owned, so it follows the world's rules |
 | core | CoreStats | **Reserved, core-owned, always the last field.** Written by the core before and after every tick; anything the MIAL writes there is overwritten [D] |
@@ -87,9 +87,10 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | jev-decisions | number | Jev decisions applied |
 | jev-invalid | number | Jev replies that were malformed or cut off |
 | jev-retries | number | Retries sent after a malformed reply |
-| sonnet-calls | number | Sonnet calls, reflections and repairs alike |
+| reflective-mind-calls | number | Sonnet calls, reflections and repairs alike |
 | repairs | number | Repair attempts |
-| sonnet-edits | number | Applied edits authored by Sonnet |
+| reflective-mind-edits | number | Applied edits authored by Sonnet |
+| reflective-mind-runs | number | Successful runs authored by Sonnet (4.10a) |
 | world-version | number | Current WorldSource version |
 
 ### 1.4 Structure [P]
@@ -143,12 +144,12 @@ A Record with at least `type` (string). Types the default MIAL emits: `arrived`,
 
 | Field | Type | Notes |
 |---|---|---|
-| kind | `user` \| `inhabitant` \| `jev` \| `sonnet-thought` \| `edit` \| `core-request` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D] |
+| kind | `user` \| `inhabitant` \| `jev` \| `reflective-mind-thought` \| `edit` \| `run` \| `core-request` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D] |
 | text | string | |
 | at | time + tick | |
 
 ### 1.11 Counters [P]
-`jevCalls`, `sonnetCalls`, `jevSinceSonnet`, `repairStreak`, `lastJevAt`, `lastSonnetAt`. They exist for cadence, the cost display, and the repair limit.
+`jevCalls`, `sonnetCalls`, `sonnetRuns`, `jevSinceSonnet`, `repairStreak`, `lastJevAt`, `lastSonnetAt`. They exist for cadence, the cost display, and the repair limit.
 
 ### 1.12 SaveGame [P]
 The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versions[], editLog[], chat[], counters, eventHistory[], halted}`. API keys are stored separately under `buildlife.keys` and are never included in the download.
@@ -206,9 +207,9 @@ These are the definitions JS calls. They're all ordinary definitions, and all of
 | `jev-system` | — | string | Every Jev call |
 | `jev-prompt` | state, history | string | Every Jev call |
 | `jev-trigger?` | state, events | boolean | After every tick |
-| `sonnet-system` | — | string | Every Sonnet call |
-| `sonnet-prompt` | state, history | string | Every Sonnet call |
-| `sonnet-trigger?` | state, events, since | boolean | After every Jev decision (`since` = `jevSinceSonnet`) |
+| `reflective-mind-system` | — | string | Every Sonnet call |
+| `reflective-mind-prompt` | state, history | string | Every Sonnet call |
+| `reflective-mind-trigger?` | state, events, since | boolean | After every Jev decision (`since` = `jevSinceSonnet`) |
 
 `history` is a list of recent event Records (the last `EVENT_HISTORY_N`) plus the decisions made, so prompts can describe recent life.
 
@@ -292,7 +293,7 @@ apply-action(state, a):
 jev-trigger?(state, events)  = any event in events has type in {full, low, recovered, idle}
                                or (status = idle and tick % IDLE_RECHECK_TICKS = 1)
                                # never left idle without asking, but not every tick
-sonnet-trigger?(state, events, since) = since >= SONNET_EVERY_N_JEV
+reflective-mind-trigger?(state, events, since) = since >= REFLECTIVE_MIND_EVERY_N_JEV
                                         or (since >= 1 and wonder < LOW_THRESHOLD)
 ```
 
@@ -301,12 +302,12 @@ sonnet-trigger?(state, events, since) = since >= SONNET_EVERY_N_JEV
 ```
 tick(state) = feed-wonder(base-tick(state))      # base-tick is decay, act, crossings, low-ticks
 feed-wonder(state):
-  edits = state.core.sonnet-edits                # a core fact (CoreStats)
+  edits = state.core.reflective-mind-edits + state.core.reflective-mind-runs   # core facts (CoreStats); runs count as 0 if absent
   if seen-edits is set and edits > seen-edits:   # any creation, however small or many
     wonder = METER_MAX; emit created              # tops it off; then it drains again
   seen-edits = edits
 ```
-`sonnet-system` tells Sonnet that only creating or improving something, through an edit, refills wonder.
+`reflective-mind-system` tells Sonnet that only creating or improving something, through an edit or a run, refills wonder.
 
 ### 4.6a Low-ticks *(MIAL)* [D]
 *Serves:* G-4 (judging changes by numbers).
@@ -341,7 +342,7 @@ on reply: if the JSON is malformed or cut off and this is the first attempt:
           if action ∉ call actions(state): chat error, no change (not retried)
           else state = call apply-action(state, action); chat jev{thought, action}
           jevSinceSonnet += 1
-          if call sonnet-trigger?(state, lastEvents, jevSinceSonnet): request Sonnet call
+          if call reflective-mind-trigger?(state, lastEvents, jevSinceSonnet): request Sonnet call
 on network/API error: chat error; the next trigger retries
 ```
 The reply is applied to the state *as it is when the reply arrives*, not the state when the request was sent.
@@ -351,16 +352,17 @@ The reply is applied to the state *as it is when the reply arrives*, not the sta
 ```
 allowed when: no Sonnet or repair call in flight, not repairing or halted,
               and now - lastSonnetAt >= SONNET_MIN_GAP_MS
-  (a user chat message skips sonnet-trigger? but still respects in-flight and the gap,
+  (a user chat message skips reflective-mind-trigger? but still respects in-flight and the gap,
    queueing at most one pending user turn)
-system = sonnet-system() + CORE_PREAMBLE + full WorldSource      # one block, prompt-cached
-user   = sonnet-prompt(state, history) + last CHAT_HISTORY_N chat entries
+system = reflective-mind-system() + CORE_PREAMBLE + full WorldSource      # one block, prompt-cached
+user   = reflective-mind-prompt(state, history) + last CHAT_HISTORY_N chat entries
          (+ "the neighbour is waiting" when a user message is pending)
 thinking = {adaptive, display: summarized}
-output_config.format = json_schema {summary, say, edits[{comment, source, delete}], core_request}
+output_config.format = json_schema {summary, say, edits[{comment, source, delete}], run[{comment, source}], core_request}
 on send:  jevSinceSonnet = 0; the waiting-user flag clears
-on reply: chat sonnet-thought (summary, then the summarized thinking); if say: chat inhabitant;
+on reply: chat reflective-mind-thought (summary, then the summarized thinking); if say: chat inhabitant;
           for each edit: apply-edit (author sonnet)
+          then for each run: run once (author sonnet)
           if core_request: chat core-request (highlighted)
 ```
 `CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. The reply is a JSON object under structured output rather than a tool call. There is no server-side fallback (Haiku 5.5 has none), so a refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
@@ -378,6 +380,17 @@ reload definitions before the next tick
 ```
 `compact` reprints the parsed definitions with each bullet's leading atoms on its line, breaking out at the first compound child (the upstream interpreter's compact printer). The tree is unchanged; lines the parser ignores are dropped. There's no behavior check. A broken world is the repair rule's job (G-5).
 
+### 4.10a Run once *(core)* [D: one-time commands on the live state]
+*Serves:* G-1, G-2. `initial-state` only runs on a new game, so before this the only way to change the running world was to make `tick` do it (the `ensure-*` migrations two Haiku instances invented).
+```
+name = first "# definition" in run.source       # none: chat error, no change
+loaded = WorldSource with run.source's defs replacing same-named ones (this call only)
+r = loaded.name(stamp-core(state))              # must return a record, like tick
+if r fails: chat error "Run … failed", state unchanged, no repair (the world isn't broken)
+else: state = stamp-core(r); sonnetRuns += 1 if author is sonnet; chat run{comment}; save
+```
+The WorldSource, its version, and the edit list are untouched; a run is not reverted by `revertTo`. Runs follow the reply's edits, so a run can call a helper the same reply defines.
+
 ### 4.11 Repair *(core)* [D]
 *Serves:* G-5.
 ```
@@ -387,7 +400,7 @@ on MIAL error (parse diagnostics that prevent loading, missing entry point, wron
   if repairStreak >= REPAIR_MAX: halted = true; chat system "halted"; stop
   repairStreak += 1
   if no Anthropic key: halted = true; stop
-  call Sonnet with CORE_REPAIR_PROMPT (fixed, ignores sonnet-system) + CORE_PREAMBLE + full source,
+  call Sonnet with CORE_REPAIR_PROMPT (fixed, ignores reflective-mind-system) + CORE_PREAMBLE + full source,
        error in the user message, same reply format; apply its edits with author repair
   when the call finishes (any outcome): resume ticking; a tick with no error sets repairStreak = 0
 ```
@@ -414,9 +427,9 @@ download: saves the current WorldSource as world-v<version>.md
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
 
 ### 5.2 Sonnet [D]
-*Serves:* G-1, G-2, G-6. "Sonnet" is the role name of the reflective mind, used in the MIAL entry points (`sonnet-system`, `sonnet-prompt`, `sonnet-trigger?`) and in code. The model filling the role is `SONNET_MODEL` (Claude Haiku 5.5), shown in the UI as `SONNET_NAME`, and it's called directly from the browser.
-- **Sees:** `sonnet-system`, `sonnet-prompt`, the core preamble, the full WorldSource, and recent chat.
-- **Can do:** speak as the inhabitant, edit any definition (including the prompts and cadence of both models), and request core changes.
+*Serves:* G-1, G-2, G-6. "Sonnet" is the code name of the reflective mind (JS and these docs); the MIAL names it `reflective-mind-*` (`reflective-mind-system`, `reflective-mind-prompt`, `reflective-mind-trigger?`, core stats `reflective-mind-calls/edits/runs`). The model filling the role is `SONNET_MODEL` (Claude Haiku 5.5), shown in the UI as `SONNET_NAME`, and it's called directly from the browser.
+- **Sees:** `reflective-mind-system`, `reflective-mind-prompt`, the core preamble, the full WorldSource, and recent chat.
+- **Can do:** speak as the inhabitant, edit any definition (including the prompts and cadence of both models), run one-time functions on the live state, and request core changes.
 - **Can't do:** edit core JS, the core preamble, or the repair prompt. Can't change the core call-gap floors.
 - **Sees the whole world source on every call** [D]. Partitioning it is a future question once the source grows.
 - **Persistent memory:** none outside of MIAL. If it wants to remember something, it writes a definition (for example `# notes`) and refers to it from its own prompt [P].
@@ -448,7 +461,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | RATE (bush, well) | 1 | per tick | D-10 |
 | RATE (shack) | 0.5 | per tick | D-10 |
 | RATE (tree) | 2 | per tick | D-10 |
-| SONNET_EVERY_N_JEV | 5 | Jev decisions | D-7 |
+| REFLECTIVE_MIND_EVERY_N_JEV | 5 | Jev decisions | D-7 |
 | IDLE_RECHECK_TICKS | 20 | ticks | D-7 |
 
 **Core-owned**: fixed JS constants in `js/config.js` (`EVAL_STEP_LIMIT` in `js/mial.js`).
@@ -483,8 +496,9 @@ Every command checks that it's legal. An illegal command returns `{ok:false, rea
 | `start()` / `pause()` | Not halted (for start) | Turns ticking on or off. Pausing also stops model triggers. In-flight calls finish and are applied |
 | `step()` | Paused, not halted, not repairing | Runs one tick, including triggers |
 | `pump()` | Always | Sends a waiting user turn to Sonnet once the gap allows. Called on a timer even while paused |
-| `sendUserMessage(text)` | Text isn't empty | Adds a chat entry and requests a Sonnet turn (skips `sonnet-trigger?`) |
+| `sendUserMessage(text)` | Text isn't empty | Adds a chat entry and requests a Sonnet turn (skips `reflective-mind-trigger?`) |
 | `applyEdit(edit)` | Edit has a comment and parses (see the apply-edit rule) | Applies it, versions it, and logs it |
+| `runOnce({comment, source, author})` | Not halted or repairing, state exists | Calls the first definition once on the live state (the run-once rule); the source is unchanged |
 | `revertTo(version)` | Always [D] | Restores that snapshot as a new version with the comment "revert to vN"; clears `halted` |
 | `newGame()` | Always | Recreates state from the current source |
 | `factoryReset()` | You confirm | Restores the default world |
@@ -502,8 +516,9 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 | `ticked` | state, events | Canvas redraw |
 | `chat` | ChatEntry | Appended to the chat log. `low` and `recovered` world events become `system` entries [P] |
 | `jev-decision` | thought, action | Chat (`jev`) |
-| `sonnet-reply` | thought, say | Chat (`sonnet-thought`, `inhabitant`) |
+| `reflective-mind-reply` | thought, say | Chat (`reflective-mind-thought`, `inhabitant`) |
 | `edit-applied` | Edit | Chat (`edit`) and the edit list |
+| `run-applied` | comment | Chat (`run`), canvas redraw |
 | `core-request` | text | Chat, highlighted |
 | `mial-error` | message, definition | Chat (`error`) |
 | `repair-started` / `halted` | streak | Chat (`system`) |

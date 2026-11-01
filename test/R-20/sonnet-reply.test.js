@@ -25,7 +25,7 @@ test('summary and summarized thinking are shown together', async () => {
   reply.content.unshift({ type: 'thinking', thinking: 'The well is far from the shack.', signature: 'x' });
   api.calls[0].resolve(reply);
   await flush();
-  const thought = game.getChat().find(e => e.kind === 'sonnet-thought');
+  const thought = game.getChat().find(e => e.kind === 'reflective-mind-thought');
   assert.strictEqual(thought.text, 'Water runs low fastest.\n\nThinking: The well is far from the shack.');
   assert.strictEqual(game.getChat().at(-1).text, 'Hi!');
 });
@@ -35,6 +35,6 @@ test('requests ask for summarized thinking and never for reasoning in the reply 
   const loaded = BL.world.load(game.getSource());
   const req = BL.minds.buildSonnet({ loaded, state: game.getState(), history: [], chat: [], source: game.getSource(), version: 1 });
   assert.deepEqual(req.body.thinking, { type: 'adaptive', display: 'summarized' });
-  assert.deepEqual(Object.keys(req.body.output_config.format.schema.properties), ['summary', 'say', 'edits', 'core_request']);
+  assert.deepEqual(Object.keys(req.body.output_config.format.schema.properties), ['summary', 'say', 'edits', 'run', 'core_request']);
   assert.doesNotMatch(BL.minds.CORE_PREAMBLE, /private reflection|your thinking/i);
 });

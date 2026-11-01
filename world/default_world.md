@@ -24,7 +24,7 @@
     - rest `true`
     - wonder `true`
 
-# SONNET_EVERY_N_JEV
+# REFLECTIVE_MIND_EVERY_N_JEV
 - `5`
 
 # IDLE_RECHECK_TICKS
@@ -394,10 +394,15 @@
 - state
 - let
   - vars
+    - core
+      - get state `"core"`
     - edits
-      - get
-        - get state `"core"`
-        - `"sonnet-edits"`
+      - +
+        - get core `"reflective-mind-edits"`
+        - if
+          - has? core `"reflective-mind-runs"`
+          - get core `"reflective-mind-runs"`
+          - `0`
     - seen
       - get state `"seen-edits"`
     - created
@@ -508,10 +513,10 @@
         - IDLE_RECHECK_TICKS
       - `1`
 
-# sonnet-trigger?
+# reflective-mind-trigger?
 - * state events since
 - or
-  - >= since SONNET_EVERY_N_JEV
+  - >= since REFLECTIVE_MIND_EVERY_N_JEV
   - and
     - >= since `1`
     - <
@@ -600,10 +605,10 @@
     - + `"Notes from your reflective self: "` jev-notes
     - `"Choose your next action."`
 
-# sonnet-system
-- text `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."` `"A quick instinctive mind called Jev picks moment-to-moment actions. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."` `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."` `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."` `"To remember something across reflections, write it into a definition such as notes and refer to it from your own prompt."` `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like food, water and rest it slows you to half speed when low (wood never does). Nothing in the world refills it: only creating something new or improving something that exists, through an edit. Any reflection that makes an edit fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."` `"On the map each place is drawn as its emoji: the one under its name in EMOJI, or an emoji field on the structure record, which wins. The inhabitant is EMOJI inhabitant. When you add a place, give it an emoji; you may change any emoji, your own included. A place with no emoji is drawn as a grey square."`
+# reflective-mind-system
+- text `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."` `"A quick instinctive mind called Jev picks moment-to-moment actions. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."` `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."` `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."` `"To remember something across reflections, write it into a definition such as notes and refer to it from your own prompt."` `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like food, water and rest it slows you to half speed when low (wood never does). Nothing in the world refills it: only creating something new or improving something that exists, through an edit or a run. Any reflection that makes an edit or a successful run fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."` `"On the map each place is drawn as its emoji: the one under its name in EMOJI, or an emoji field on the structure record, which wins. The inhabitant is EMOJI inhabitant. When you add a place, give it an emoji; you may change any emoji, your own included. A place with no emoji is drawn as a grey square."` `"initial-state only runs when a new game starts. To change the world as it is now, such as adding a place, use run; to keep it in future new games too, also edit initial-state."`
 
-# sonnet-prompt
+# reflective-mind-prompt
 - * state history
 - text `"Current world state:"`
   - str state

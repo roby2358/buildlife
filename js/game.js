@@ -12,7 +12,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const listeners = [];
   const emit = (type, payload) => listeners.forEach(fn => fn(type, payload));
 
-  const freshCounters = () => ({ ticks: 0, jevCalls: 0, jevDecisions: 0, jevInvalid: 0, jevRetries: 0, sonnetCalls: 0, repairs: 0, jevSinceSonnet: 0, repairStreak: 0, lastJevAt: -Infinity, lastSonnetAt: -Infinity });
+  const freshCounters = () => ({ ticks: 0, jevCalls: 0, jevDecisions: 0, jevInvalid: 0, jevRetries: 0, sonnetCalls: 0, sonnetRuns: 0, repairs: 0, jevSinceSonnet: 0, repairStreak: 0, lastJevAt: -Infinity, lastSonnetAt: -Infinity });
 
   const g = {
     source: '',
@@ -221,10 +221,11 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     const parsed = minds.parseSonnet(resp);
     if (!parsed.ok) { addChat('error', parsed.error); return; }
     const reflection = [parsed.summary, parsed.thinking && `Thinking: ${parsed.thinking}`].filter(Boolean).join('\n\n');
-    if (reflection) addChat('sonnet-thought', reflection);
+    if (reflection) addChat('reflective-mind-thought', reflection);
     if (parsed.say) addChat('inhabitant', parsed.say);
-    emit('sonnet-reply', { summary: parsed.summary, thinking: parsed.thinking, say: parsed.say });
+    emit('reflective-mind-reply', { summary: parsed.summary, thinking: parsed.thinking, say: parsed.say });
     for (const edit of parsed.edits) applyEdit({ ...edit, author });
+    for (const run of parsed.runs) runOnce({ ...run, author });
     if (parsed.coreRequest) {
       addChat('core-request', parsed.coreRequest);
       emit('core-request', { text: parsed.coreRequest });
@@ -239,9 +240,10 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     'jev-decisions': g.counters.jevDecisions,
     'jev-invalid': g.counters.jevInvalid,
     'jev-retries': g.counters.jevRetries,
-    'sonnet-calls': g.counters.sonnetCalls,
+    'reflective-mind-calls': g.counters.sonnetCalls,
     repairs: g.counters.repairs,
-    'sonnet-edits': g.editLog.filter(e => e.author === 'sonnet').length,
+    'reflective-mind-edits': g.editLog.filter(e => e.author === 'sonnet').length,
+    'reflective-mind-runs': g.counters.sonnetRuns || 0,
     'world-version': g.version,
   });
   const stampCore = (state) => W.withCoreStats(state, coreStats());
@@ -294,6 +296,26 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     emit('edit-applied', entry);
     save();
     return { ok: true, events: [entry], diagnostics: r.diagnostics };
+  };
+
+  // Run rule: a one-time function on the live state; the world source is unchanged.
+  const runOnce = (run) => {
+    const comment = String((run && run.comment) || '').trim() || '(no comment)';
+    if (g.halted || g.repairing || !g.state) {
+      addChat('error', `Run "${comment}" skipped: the world is ${g.halted ? 'halted' : 'not running'}`);
+      return { ok: false, reason: 'not-running' };
+    }
+    const r = W.runOnce(g.source, run.source, stampCore(g.state));
+    if (!r.ok) {
+      addChat('error', `Run "${comment}" failed${r.definition ? ` in "# ${r.definition}"` : ''}: ${r.error}. The state is unchanged.`);
+      return { ok: false, reason: r.error };
+    }
+    if ((run.author || 'sonnet') === 'sonnet') g.counters.sonnetRuns += 1;
+    g.state = stampCore(r.value);
+    addChat('run', comment);
+    emit('run-applied', { comment });
+    save();
+    return { ok: true, events: [] };
   };
 
   const revertTo = (version) => {
@@ -396,7 +418,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   };
 
   return {
-    boot, start, pause, step, tickOnce, pump, sendUserMessage, applyEdit, revertTo, newGame, factoryReset, setSettings,
+    boot, start, pause, step, tickOnce, pump, sendUserMessage, applyEdit, runOnce, revertTo, newGame, factoryReset, setSettings,
     on: (fn) => listeners.push(fn),
     getState: () => g.state,
     getSource: () => g.source,

@@ -77,7 +77,7 @@ const one = (seedOffset) => {
   let decisions = 0;
   for (let t = 0; t < ticks; t++) {
     const edits = createEvery ? Math.floor(t / createEvery) : 0;
-    s = W.tick(loaded, W.withCoreStats(s, { 'sonnet-edits': edits })).value;
+    s = W.tick(loaded, W.withCoreStats(s, { 'reflective-mind-edits': edits })).value;
     const o = M.toJS(s);
     const vals = Object.values(o.meters);
     if (M.callDef(loaded, 'speed', [M.fromJS(o.meters)]).value.value < BASE) slow++;

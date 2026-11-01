@@ -12,7 +12,7 @@ test('state.core is present after a tick and counts ticks', () => {
   const c = core(BL, game);
   assert.strictEqual(c.ticks, 2);
   assert.strictEqual(c['world-version'], game.getVersion());
-  for (const k of ['jev-decisions', 'jev-invalid', 'jev-retries', 'sonnet-calls', 'repairs', 'sonnet-edits']) assert.strictEqual(typeof c[k], 'number', k);
+  for (const k of ['jev-decisions', 'jev-invalid', 'jev-retries', 'reflective-mind-calls', 'repairs', 'reflective-mind-edits']) assert.strictEqual(typeof c[k], 'number', k);
 });
 
 test('world code can read state.core during the tick, and its writes are overwritten', () => {

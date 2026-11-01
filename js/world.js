@@ -51,9 +51,9 @@ BL.world = (() => {
     jevSystem: (l) => call(l, 'jev-system', [], 'string'),
     jevPrompt: (l, state, history) => call(l, 'jev-prompt', [state, M.fromJS(history)], 'string'),
     jevTrigger: (l, state, events) => call(l, 'jev-trigger?', [state, events], 'truthy'),
-    sonnetSystem: (l) => call(l, 'sonnet-system', [], 'string'),
-    sonnetPrompt: (l, state, history) => call(l, 'sonnet-prompt', [state, M.fromJS(history)], 'string'),
-    sonnetTrigger: (l, state, events, since) => call(l, 'sonnet-trigger?', [state, events, M.node(since)], 'truthy'),
+    sonnetSystem: (l) => call(l, 'reflective-mind-system', [], 'string'),
+    sonnetPrompt: (l, state, history) => call(l, 'reflective-mind-prompt', [state, M.fromJS(history)], 'string'),
+    sonnetTrigger: (l, state, events, since) => call(l, 'reflective-mind-trigger?', [state, events, M.node(since)], 'truthy'),
   };
 
   // The current tick's events: as MIAL (for trigger calls) and as JS objects ([] when absent or malformed).
@@ -108,6 +108,19 @@ BL.world = (() => {
       deleted: deletes.filter(n => !missing.includes(n)),
       diagnostics: diagnostics.concat(missing.map(n => `delete: no definition named "${n}"`)),
     };
+  };
+
+  // --- Run rule ------------------------------------------------------------
+
+  // Calls the first definition in `text` once with the state, alongside the world's own
+  // definitions (a same-named world definition is shadowed for this call only). The world
+  // source is not changed. Must return a record, like tick.
+  const runOnce = (source, text, state) => {
+    const name = splitBlocks(String(text || '')).blocks.map(b => b.name).find(Boolean);
+    if (!name) return { ok: false, error: 'the run has no "# definition"' };
+    const merged = applyEdit(source, { source: text });
+    if (!merged.ok) return { ok: false, error: merged.error };
+    return call(load(merged.source), name, [state], 'record');
   };
 
   // --- Render contract ---------------------------------------------------
@@ -213,5 +226,5 @@ BL.world = (() => {
     return out;
   };
 
-  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, renderData, lowThreshold, slowingMeters, emojiMap, withCoreStats, statsData };
+  return { load, call, ...entry, eventsOf, eventsNode, splitBlocks, applyEdit, runOnce, renderData, lowThreshold, slowingMeters, emojiMap, withCoreStats, statsData };
 })();

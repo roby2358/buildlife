@@ -1,4 +1,4 @@
-// R-21: wonder drains, and a rise in core.sonnet-edits fills it to METER_MAX.
+// R-21: wonder drains, and a rise in core.reflective-mind-edits fills it to METER_MAX.
 const test = require('node:test');
 const assert = require('node:assert');
 const { defaultWorld } = require('../helpers/world');
@@ -6,7 +6,7 @@ const { defaultWorld } = require('../helpers/world');
 const w = defaultWorld();
 const MAX = w.constant('METER_MAX');
 const DECAY = w.table('DECAY');
-const withEdits = (state, n) => w.W.withCoreStats(state, { 'sonnet-edits': n });
+const withEdits = (state, n) => w.W.withCoreStats(state, { 'reflective-mind-edits': n });
 const wonder = (state) => w.js(state).meters.wonder;
 
 test('wonder drains like the other needs', () => {

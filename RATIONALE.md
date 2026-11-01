@@ -23,9 +23,17 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ### D-16 The core preamble and the repair prompt can't be edited by the models — *Proposed*
 - **Alternatives:** keep them in MIAL too.
-- **Why:** G-5 > G-1 here. If Sonnet could delete its own instructions for editing, one bad edit could leave it unable to make any more. `sonnet-system` and `sonnet-prompt` remain fully editable, so Sonnet still controls its own voice and attention.
+- **Why:** G-5 > G-1 here. If Sonnet could delete its own instructions for editing, one bad edit could leave it unable to make any more. `reflective-mind-system` and `reflective-mind-prompt` remain fully editable, so Sonnet still controls its own voice and attention.
 
 ## Minds
+
+### D-36 Sonnet can run a one-time function on the live state — *Decided*
+- **Intent:** lower the barrier to building (your call). `initial-state` only runs on a new game, so changing the running world meant either asking for a restart or writing a permanent `tick` wrapper that adds the thing if it's missing. Two Haiku instances each asked for a restart; two others each tried `initial-state`, saw it do nothing, and invented `ensure-*` wrappers.
+- **Shape:** a `run` list in the reply, each `{comment, source}`, where the first definition takes the state and returns the new one. It's called once after the reply's edits with the world's definitions in scope, then discarded. A field in the structured reply, not a real tool call, because the reply is already one JSON object (4.9) and a tool round trip would add a turn.
+- **Failure:** a chat error and no change. Not the repair rule: the world source isn't broken, and the error reaches Sonnet through recent chat.
+- **Wonder:** in the default world a successful Sonnet run counts like an edit (`core.reflective-mind-runs`), so building through a run is still creating. That's world MIAL and the models may change it.
+- **Alternatives:** a hint in the preamble only (rejected: still a per-tick wrapper forever); a `migrate` entry point called after each edit (rejected: still an edit-and-delete dance for a one-off); letting edits carry a state patch (rejected: mixes two kinds of change in the edit list).
+- **Not reverted:** `revertTo` restores source, not state, so a run stays. Same as any tick.
 
 ### D-3 Jev picks actions fast; Sonnet reflects slowly and can rewrite both models' prompts — *Decided*
 - **Alternatives:** Sonnet proposes and Jev judges; both propose and a rule reconciles; equal peers in conversation.
@@ -35,7 +43,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **The reflective mind runs on Claude Haiku 5.5** (`claude-haiku-5-5`), chosen by you as better sized for this job: a small world, short structured replies. It costs a twentieth of Sonnet 5.5's per-token price ($0.10/$0.50 against $2/$10 per million tokens). "Sonnet" stays the role name in the MIAL entry points and code, because existing worlds depend on those names; the UI shows `SONNET_NAME`. It's called with plain `fetch` from the browser (`anthropic-dangerous-direct-browser-access: true`, API version `2026-10-21`). The SDK isn't an option on a file:// page with no bundler.
 - **The reply is structured output, not a tool.** It's a JSON object under `output_config.format` (`SONNET_SCHEMA`), so edits arrive as fields rather than prose to parse. *Alternatives:* a forced `act` tool, which Sonnet 5.5 rejected with a 400; an `auto` tool with a prompt instruction, which doesn't guarantee a call. A tool-based design is still worth revisiting if Sonnet ever needs to read definitions on demand (see D-23).
 - **No server-side fallback:** Haiku 5.5 doesn't offer one, so a refusal is a chat error naming its category, and the next reflection tries again.
-- The system text (sonnet-system + core preamble + world source) is one prompt-cached block. It changes only when the world is edited, so most reflections read it from the cache.
+- The system text (reflective-mind-system + core preamble + world source) is one prompt-cached block. It changes only when the world is edited, so most reflections read it from the cache.
 - Jev is `typesafe/jev-router` on OpenRouter, the only Jev slug listed (checked 2026-10-31). It supports `response_format`/structured outputs, so the `actions` list becomes a JSON-schema enum.
 - **CORS from file://:** you already have many pages that call OpenRouter this way. Anthropic needs the `anthropic-dangerous-direct-browser-access: true` header, which is expected to work and is checked first during implementation.
 
@@ -141,18 +149,18 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Cost:** comments or prose lines in an edit are dropped (the parser ignored them anyway). The first save after the switch rewrites the cached system block once.
 
 ### D-32 Wonder: a fifth need that only creating or improving refills — *Decided*
-- **Alternatives:** aspirations in `sonnet-system` only (a prompt the mind can edit away silently); world pressure only (seasons, decay of structures), which gives problems but no drive to make things; challenges from you in chat, which depend on you; a core-fixed goal or score, which cuts against the rules belonging to the inhabitant.
-- **Why:** In a stable world, Sonnet had no reason to change anything: "chop wood, carry water." Making creativity a need puts making things inside the survival loop it already understands. It's measured by a core fact (`core.sonnet-edits`), so the world doesn't trust its own say-so, and it needs no core change.
+- **Alternatives:** aspirations in `reflective-mind-system` only (a prompt the mind can edit away silently); world pressure only (seasons, decay of structures), which gives problems but no drive to make things; challenges from you in chat, which depend on you; a core-fixed goal or score, which cuts against the rules belonging to the inhabitant.
+- **Why:** In a stable world, Sonnet had no reason to change anything: "chop wood, carry water." Making creativity a need puts making things inside the survival loop it already understands. It's measured by a core fact (`core.reflective-mind-edits`), so the world doesn't trust its own say-so, and it needs no core change.
 - **Any creation tops wonder off** (your choice, over a fixed increment per creation). The rule becomes one plain deadline, "make something at least every few minutes," instead of bookkeeping. How much it made doesn't matter, only that it made something.
 - **Gaming:** trivial edits refill it as well as good ones. That's deliberately not prevented (D-24); whether the inhabitant keeps inventing or games the meter shows up in the edit log, and either is worth seeing.
 - **Numbers:** DECAY.wonder 0.05 drains a full meter to the threshold in about 5.8 minutes. `Measured by: node tools/tune.js --policy smart --create-every S` → every 60 s or 300 s: never slow after the start; 420 s: slow 66%; 600 s: slow 72%, as half speed cascades into the other needs. Sonnet reflects roughly every 2 minutes at the current cadence, and earlier when wonder is low. Unmeasured with the real Sonnet.
 
 ### D-7 Event-driven cadence, defined in MIAL — *Decided (event-driven) / Proposed (specific triggers and numbers)*
-- **Why:** G-2 and cost. Jev is asked when something happens. Sonnet is asked every SONNET_EVERY_N_JEV decisions or when you talk. Sonnet can retune all of it.
+- **Why:** G-2 and cost. Jev is asked when something happens. Sonnet is asked every REFLECTIVE_MIND_EVERY_N_JEV decisions or when you talk. Sonnet can retune all of it.
 
 ### D-12 Core-enforced minimum gaps between calls, adjustable in settings — *Decided*
 - **Alternatives:** no floor (the MIAL is fully in charge); fixed constants.
-- **Why:** With "apply anything," Sonnet could set `sonnet-trigger?` to always true, which would mean a paid call on every tick. With the defaults, the JEV_MIN_GAP_MS and SONNET_MIN_GAP_MS floors cap the worst case at 30 Jev and 6 Sonnet calls per minute, whatever the MIAL says.
+- **Why:** With "apply anything," Sonnet could set `reflective-mind-trigger?` to always true, which would mean a paid call on every tick. With the defaults, the JEV_MIN_GAP_MS and SONNET_MIN_GAP_MS floors cap the worst case at 30 Jev and 6 Sonnet calls per minute, whatever the MIAL says.
 
 ### D-22 Each edit-list entry has "revert to here" — *Decided*
 - **Why:** G-5. It's the manual way out of a halted world short of a factory reset. A revert is itself a new version with a comment, so history is never rewritten.

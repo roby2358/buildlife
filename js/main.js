@@ -98,7 +98,7 @@
   game.on((type, payload) => {
     if (type === 'chat') chat.appendMessage(payload);
     if (type === 'edit-applied') renderEdits();
-    if (type === 'ticked' || type === 'jev-decision' || type === 'edit-applied') latest = game.getRenderData();
+    if (type === 'ticked' || type === 'jev-decision' || type === 'edit-applied' || type === 'run-applied') latest = game.getRenderData();
     if (type === 'ticked' && $('statsDialog').open) renderStats();
     updateControls();
   });

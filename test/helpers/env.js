@@ -35,7 +35,7 @@ const flush = () => new Promise(r => setImmediate(r));
 const jevReply = (action, thought = 'test') => ({ choices: [{ message: { content: JSON.stringify({ thought, action }) } }] });
 const sonnetReply = (obj) => ({
   stop_reason: 'end_turn',
-  content: [{ type: 'text', text: JSON.stringify({ summary: '', say: '', edits: [], core_request: '', ...obj }) }],
+  content: [{ type: 'text', text: JSON.stringify({ summary: '', say: '', edits: [], run: [], core_request: '', ...obj }) }],
 });
 
 // A game booted on the default world with a fake clock.

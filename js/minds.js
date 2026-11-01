@@ -26,18 +26,18 @@ Your world is written in MarkdownIsALisp (MIAL), a Lisp whose syntax is Markdown
 The core calls these definitions (keep their names and parameters, or the world breaks):
 | definition | parameters | must return |
 |---|---|---|
-| initial-state | none | a record (new game only) |
+| initial-state | none | a record (only when a new game starts; to change the running world, use run) |
 | tick | state | the next state record; its "events" field holds this tick's events |
 | actions | state | a list of strings: the choices Jev may pick |
 | apply-action | state, action | a state record |
 | jev-system | none | Jev's system prompt (string) |
 | jev-prompt | state, history | Jev's prompt (string) |
 | jev-trigger? | state, events | true to ask Jev now |
-| sonnet-system | none | your own system prompt (string) |
-| sonnet-prompt | state, history | your own prompt (string) |
-| sonnet-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
+| reflective-mind-system | none | your own system prompt (string) |
+| reflective-mind-prompt | state, history | your own prompt (string) |
+| reflective-mind-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
 
-The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, jev-decisions, jev-invalid, jev-retries, sonnet-calls, repairs, sonnet-edits, world-version). Anything you write there is overwritten.
+The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, jev-decisions, jev-invalid, jev-retries, reflective-mind-calls, repairs, reflective-mind-edits, reflective-mind-runs, world-version). Anything you write there is overwritten.
 Keep statistics about the world itself in your own MIAL, for example a record counting the ticks each need spends below the low threshold, so they follow your rules if you change them.
 The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every few seconds or you more often than every few seconds, whatever your triggers say.
 
@@ -46,6 +46,7 @@ Reply with one JSON object:
 - summary: one or two sentences on what you noticed and what you decided (shown to the neighbour).
 - say: what you say aloud to the neighbour, or "" for nothing.
 - edits: a list of world edits, each {comment, source, delete}. source is Markdown holding one or more complete "# name" definitions; each replaces the definition with that name or is added if new. delete lists definition names to remove. comment says why, like a commit message. Use [] for no edits.
+- run: one-time commands on the running world, each {comment, source}. source is Markdown whose first "# name" definition takes the state and returns the new state record; any further definitions are helpers. The core calls it once, right after your edits, with your world's definitions in scope, then forgets it: the world source does not change. Use it to change the world as it is now, for example to add a structure, move something or set a meter. If it fails, the error appears in the chat and the state is left as it was. Use [] for none.
 - core_request: a change you would like made to the core JavaScript (which you cannot edit), or "" for none.
 Edits apply immediately and without checks. If the world breaks, you will be asked to repair it.`;
 
@@ -70,9 +71,21 @@ Your only job is to make it load and tick again with as little change as possibl
           additionalProperties: false,
         },
       },
+      run: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            comment: { type: 'string' },
+            source: { type: 'string' },
+          },
+          required: ['comment', 'source'],
+          additionalProperties: false,
+        },
+      },
       core_request: { type: 'string' },
     },
-    required: ['summary', 'say', 'edits', 'core_request'],
+    required: ['summary', 'say', 'edits', 'run', 'core_request'],
     additionalProperties: false,
   };
 
@@ -148,7 +161,7 @@ Your only job is to make it load and tick again with as little change as possibl
 
   const sourceSection = (source, version) => `## Current world source (version ${version})\n\n${source}`;
 
-  // Sonnet call rule: sonnet-system + core preamble + full source; sonnet-prompt + recent chat.
+  // Sonnet call rule: reflective-mind-system + core preamble + full source; reflective-mind-prompt + recent chat.
   const buildSonnet = ({ loaded, state, history, chat, source, version, userWaiting }) => {
     const system = W.sonnetSystem(loaded);
     if (!system.ok) return fail(system);
@@ -160,7 +173,7 @@ Your only job is to make it load and tick again with as little change as possibl
     return { ok: true, body: sonnetBody(`${system.value}\n\n${CORE_PREAMBLE}\n\n${sourceSection(source, version)}`, user) };
   };
 
-  // Repair rule: fixed prompt, ignores sonnet-system.
+  // Repair rule: fixed prompt, ignores reflective-mind-system.
   const buildRepair = ({ source, version, error, definition }) => ({
     ok: true,
     body: sonnetBody(
@@ -184,6 +197,10 @@ Your only job is to make it load and tick again with as little change as possibl
       source: String(e.source || ''),
       delete: Array.isArray(e.delete) ? e.delete.map(String) : [],
     })) : [];
+    const runs = Array.isArray(data.run) ? data.run.filter(r => r && typeof r === 'object').map(r => ({
+      comment: String(r.comment || '').trim() || '(no comment)',
+      source: String(r.source || ''),
+    })) : [];
     const thinking = resp.content.filter(b => b.type === 'thinking' && b.thinking).map(b => b.thinking).join('\n\n');
     return {
       ok: true,
@@ -191,6 +208,7 @@ Your only job is to make it load and tick again with as little change as possibl
       thinking,
       say: String(data.say || ''),
       edits,
+      runs,
       coreRequest: String(data.core_request || ''),
     };
   };
