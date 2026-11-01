@@ -30,6 +30,13 @@
 # IDLE_RECHECK_TICKS
 - `20`
 
+# MOVE_COST
+- mial
+  - record
+    - food `0.2`
+    - water `0.2`
+    - rest `0.2`
+
 # DECAY
 - mial
   - record
@@ -251,6 +258,24 @@
       - s
     - inh
 
+# pay-move
+- * meters steps
+- reduce
+  - lambda
+    - * acc m
+    - put acc m
+      - max `0`
+        - -
+          - get acc m
+          - *
+            - get MOVE_COST m
+            - steps
+  - meters
+  - filter
+    - lambda m
+      - has? meters m
+    - keys MOVE_COST
+
 # move
 - state
 - let
@@ -273,8 +298,23 @@
                 - speed
                   - get state `"meters"`
             - s
+        - steps
+          - +
+            - abs
+              - -
+                - get moved `"x"`
+                - get inh `"x"`
+            - abs
+              - -
+                - get moved `"y"`
+                - get inh `"y"`
         - next
-          - put state `"inhabitant"` moved
+          - put
+            - put state `"inhabitant"` moved
+            - `"meters"`
+            - pay-move
+              - get state `"meters"`
+              - steps
       - if
         - eq
           - get moved `"status"`
@@ -524,7 +564,7 @@
 - `""`
 
 # jev-system
-- text `"You are the quick, instinctive mind of a small inhabitant living on a tiny grid world."` `"The world has a bush (food), a well (water), a shack (rest) and a tree (wood)."` `"Each need slowly drains. If any one of food, water or rest falls below the low threshold, you move at half speed. Wood never slows you."` `"Choose the single next action that best keeps every need healthy."` `"Prefer the lowest need, but weigh walking distance: a nearby refill is cheap."` `"Reply only with JSON: a one-sentence thought and the action."`
+- text `"You are the quick, instinctive mind of a small inhabitant living on a tiny grid world."` `"The world has a bush (food), a well (water), a shack (rest) and a tree (wood)."` `"Each need slowly drains. If any one of food, water or rest falls below the low threshold, you move at half speed. Wood never slows you."` `"Every tile you walk costs a little food, water and rest."` `"Choose the single next action that best keeps every need healthy."` `"Prefer the lowest need, but weigh walking distance: a nearby refill is cheap."` `"Reply only with JSON: a one-sentence thought and the action."`
 
 # jev-prompt
 - * state history

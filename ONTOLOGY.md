@@ -255,12 +255,13 @@ if any m in SLOWING_METERS has meters[m] < LOW_THRESHOLD: speed = speed * SLOW_F
 The UI's "slow" badge reads SLOWING_METERS (a record whose keys are the slowing meters), and falls back to every meter if it isn't a record. Bars below LOW_THRESHOLD are shaded whether or not they slow.
 
 ### 4.3 Movement *(MIAL)* [P]
-*Serves:* G-2. The open grid has no obstacles, so movement is a straight-line step.
+*Serves:* G-2. The open grid has no obstacles, so movement is a straight-line step. Walking costs food, water and rest per tile (MOVE_COST), on top of decay, so distance matters; the cost is per tile, not per tick, so half speed doesn't double it.
 ```
 if status = walking:
   progress += speed
   while progress >= 1 and not adjacent-or-on(goal):
     step one tile toward goal (larger axis gap first); progress -= 1
+  for each m in MOVE_COST: meters[m] = max(0, meters[m] - MOVE_COST[m] × tiles stepped this tick)
   if adjacent-or-on(goal): status = using; emit arrived{goal}
 ```
 
@@ -442,6 +443,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | BASE_SPEED | 0.25 | tiles per tick | D-10 |
 | SLOW_FACTOR | 0.5 | × speed | D-2 |
 | SLOWING_METERS | food, water, rest, wonder | record keys | D-2 |
+| MOVE_COST | food 0.2, water 0.2, rest 0.2 | per tile walked | D-34 |
 | RATE (bush, well) | 1 | per tick | D-10 |
 | RATE (shack) | 0.5 | per tick | D-10 |
 | RATE (tree) | 2 | per tick | D-10 |

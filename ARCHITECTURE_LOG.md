@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-01: Walking costs food, water and rest
+Each tile walked now takes MOVE_COST (0.2 each) from food, water and rest, on top of decay (your call). New MIAL record MOVE_COST and definition `pay-move`; `move` charges for the tiles actually stepped that tick, floored at 0. Per tile, so half speed doesn't double the cost. Jev's and Sonnet's prompts mention it. Tuned with `tools/tune.js`: the smart stand-in goes from 0% to about 6% at half speed (D-34, R-23).
+
 ### 2026-11-01: Wood no longer slows
 Half speed now applies when any one of food, water, rest or wonder is below LOW_THRESHOLD (30); wood is optional and never slows (your call). New MIAL record SLOWING_METERS lists the slowing meters; `any-low?` checks only those. The "slow" badge reads it through `BL.world.slowingMeters`, and Jev's prompt says wood never slows. `tools/tune.js` measures half speed with the world's own `speed` definition, so it stays correct if the set changes (D-2, R-4).
 

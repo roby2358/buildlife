@@ -2,7 +2,7 @@
 
 A very small world: a bush, a well, a shack, a tree, and one inhabitant. The inhabitant gets
 hungry, thirsty, tired, short on wood, and short on *wonder*. If any one of those except wood
-runs low, it trudges at half speed. Wood is optional. Nothing worse ever happens. We're not monsters.
+runs low, it trudges at half speed. Walking makes it hungrier, thirstier and more tired. Wood is optional. Nothing worse ever happens. We're not monsters.
 
 The twist is that the world's rules aren't fixed. They're written in
 [MarkdownIsALisp](https://github.com/roby2358/yuwakisaweb/tree/main/markdown_is_a_lisp), a Lisp

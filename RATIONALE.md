@@ -81,6 +81,13 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Not measured:** the real Jev's latency and choices, and how often the real Sonnet creates.
 - The other numbers (TICK_MS, BASE_SPEED, LOW_THRESHOLD, grid size) are unmeasured first guesses.
 
+### D-34 Walking costs food, water and rest per tile — *Decided (costs those three) / tuned by X-1 (0.2)*
+- **Intent:** you asked that moving cost rest, food and water. Before this, walking was free apart from time, so the bush, well and shack being far apart only mattered as decay during the trip.
+- **Per tile, not per tick:** charging per tick would make a slowed inhabitant pay double for the same trip, compounding the only penalty (D-2). Per tile keeps the cost proportional to distance. It's taken from the tiles actually stepped in `move`, so an edited `walk` or `step-toward` is still charged correctly.
+- **Alternatives measured** (`node tools/tune.js --runs 2 --policy smart|lowest`, half-speed share): 0 → smart 0%, lowest 1% (lowest need ≈ 41 / 25). 0.1 → 0% / 2%. 0.15 → 0.1% / 0% (lowest need ≈ 30, right at the threshold). 0.2 → 6.5% / 6%, water the low one. 0.3 → 26% / 7%.
+- **Chosen 0.2:** walking now visibly matters (the smart stand-in occasionally runs water low on long trips) without making half speed the normal state. `random` stays at 77–92%.
+- **Not measured:** how the real Jev weighs distance once its prompt mentions the cost.
+
 ### D-6 Edits replace, add, or delete whole definitions, with no validation; parsing is all or nothing — *Decided (unit, no validation) / Proposed (all or nothing)*
 - **Alternatives:** whole-file rewrite; validate with a dry-run tick and roll back; your approval.
 - **Why:** G-1. You chose "apply anything." The only check is that the edit text parses into definitions, which rejects mangled output without judging behavior.
