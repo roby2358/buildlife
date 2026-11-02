@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-02: Jev's chat line shows its top three
+The `jev` chat entry now lists the three likeliest options with their probabilities, highest first (`→ go-well 0.83 · go-bush 0.10 · go-tree 0.05`); the first is the one acted on. Without probabilities it falls back to the choice and its confidence (R-12).
+
 ### 2026-11-02: Jev follows the latest release
 JEV_MODEL `typesafe/jev-1.14` → `~typesafe/jev-latest` (your call), OpenRouter's alias for the newest Jev (D-41).
 

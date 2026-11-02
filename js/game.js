@@ -173,6 +173,15 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     return api.jev(req.body).then(resp => handleJevReply(resp, isRetry));
   };
 
+  // The chat line: the three likeliest options, highest first ("go-well 0.82 · go-bush 0.10 · stay 0.05").
+  // Without probabilities, just the choice and its confidence.
+  const jevTop3 = (parsed, conf) => {
+    const top = Object.entries(parsed.probabilities || {}).filter(([, p]) => typeof p === 'number')
+      .sort((a, b) => b[1] - a[1]).slice(0, 3);
+    if (!top.length) return `${parsed.action}${conf === undefined ? '' : ` ${conf.toFixed(2)}`}`;
+    return top.map(([a, p]) => `${a} ${p.toFixed(2)}`).join(' · ');
+  };
+
   // Applied to the state as it is when the reply arrives.
   const handleJevReply = (resp, isRetry) => {
     if (g.halted || g.repairing) return undefined;
@@ -194,7 +203,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     g.state = next.value;
     const conf = parsed.confidence === undefined ? undefined : Math.round(parsed.confidence * 100) / 100;
     pushHistory([{ type: 'decision', action: parsed.action, ...(conf === undefined ? {} : { confidence: conf }) }]);
-    addChat('jev', `→ ${parsed.action}${conf === undefined ? '' : ` (${conf.toFixed(2)})`}`);
+    addChat('jev', `→ ${jevTop3(parsed, conf)}`);
     emit('jev-decision', parsed);
     g.counters.jevSinceSonnet += 1;
     g.counters.jevDecisions += 1;

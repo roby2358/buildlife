@@ -354,7 +354,8 @@ on reply: if answers.action.choice is missing and this is the first attempt:
             (no gap check; the in-flight slot covers both attempts)
           if missing again: jev-invalid += 1; chat error, no change; no third attempt
           if action ∉ call actions(state): chat error, no change (not retried)
-          else state = call the definition named choice (state); chat jev "→ choice (confidence)";
+          else state = call the definition named choice (state);
+               chat jev "→ a 0.83 · b 0.10 · c 0.05" (the three highest probabilities, highest first);
                event history += {type: decision, action: choice, confidence}
           jevSinceSonnet += 1
           if call reflective-mind-trigger?(state, lastEvents, jevSinceSonnet): request Sonnet call
