@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-02: The preamble shows how to quote a string
+The reflective mind twice wrote `"type"` / `"structures"` without backticks in one session (a `wakes-jev?` edit, then a run), and MIAL read them as undefined symbols. CORE_PREAMBLE now follows "Backticks make literals" with a right/wrong example, and notes that keys inside `- mial` data stay bare.
+
 ### 2026-11-02: Jev's chat line shows its top three
 The `jev` chat entry now lists the three likeliest options with their probabilities, highest first (`→ go-well 0.83 · go-bush 0.10 · go-tree 0.05`); the first is the one acted on. Without probabilities it falls back to the choice and its confidence (R-12).
 

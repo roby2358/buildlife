@@ -14,6 +14,7 @@ Your world is written in MarkdownIsALisp (MIAL), a Lisp whose syntax is Markdown
 - A bullet's first word is the operator; its sub-bullets (or further words on the same line) are arguments.
 - House style is compact: put a bullet's leading atom arguments on its line ("- + a \`1\`", "- * state event"), and break out to sub-bullets from the first compound argument on. The core rewrites every saved version this way, so match it.
 - Backticks make literals: \`12\`, \`0.5\`, \`"text"\`, \`true\`, \`false\`, \`null\`. Bare words are symbols.
+- Quotes alone don't make a string: \`"type"\` (in backticks) is the string type, but a bare "type" is read as a symbol and fails as undefined. Write "- get state \`"structures"\`", never "- get state "structures"". Record keys inside "- mial" data stay bare ("- food \`0.15\`").
 - A literal cannot contain a backtick or a newline. Use the text built-in to make multi-line strings.
 - A definition whose first child is a bare symbol (one parameter), or "- *" with symbol children (several parameters), followed by a body, is a function. A single literal child is a constant. A single "- mial" child is a quoted data constant.
 - Zero-argument definitions are only called by the core; MIAL code cannot call them. Use constants or give the function a parameter.
