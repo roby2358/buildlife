@@ -144,19 +144,24 @@ A Record with at least `type` (string). Types the default MIAL emits: `arrived`,
 
 | Field | Type | Notes |
 |---|---|---|
-| kind | `user` \| `inhabitant` \| `jev` \| `reflective-mind-thought` \| `edit` \| `run` \| `core-request` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D] |
+| kind | `user` \| `inhabitant` \| `jev` \| `reflective-mind-thought` \| `edit` \| `run` \| `core-request` \| `memory` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D]. `memory` shows a compaction summary (D-40) |
 | text | string | |
+| seq | number | +1 per entry; marks which entries a user turn already carried |
 | at | time + tick | |
 
 ### 1.10a CoreRequest [D]
 *Serves:* G-4.
 `{text, at, tick}`, one per non-empty `core_request` in a Sonnet reply, kept in `requests` until you delete it (D-38). Deleting doesn't touch the chat or tell the inhabitant.
 
+### 1.10b Conversation [D]
+*Serves:* G-2, G-6. The reflective mind's memory between calls (D-39).
+`{block, turns[]}`: `block` is the latest compaction block `{type: "compaction", content, signature}` exactly as the API returned it, or null. `turns` are complete user/assistant pairs of plain text: the user turn as sent, and the reply's JSON text. Thinking blocks and the per-call status are never stored. Turns only ever append, until compaction replaces the oldest of them with a new block. The core also keeps `chatSeq` and `lastSeenSeq` (the newest chat entry a stored user turn carried).
+
 ### 1.11 Counters [P]
-`jevCalls`, `sonnetCalls`, `sonnetRuns`, `jevSinceSonnet`, `repairStreak`, `lastJevAt`, `lastSonnetAt`. They exist for cadence, the cost display, and the repair limit.
+`jevCalls`, `sonnetCalls`, `sonnetRuns`, `compactions`, `jevSinceSonnet`, `repairStreak`, `lastJevAt`, `lastSonnetAt`. They exist for cadence, the cost display, and the repair limit.
 
 ### 1.12 SaveGame [P]
-The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versions[], editLog[], chat[], requests[], counters, eventHistory[], halted}`. API keys are stored separately under `buildlife.keys` and are never included in the download.
+The localStorage key `buildlife.save.v1` holds `{schema:1, state, source, versions[], editLog[], chat[], requests[], conversation, chatSeq, lastSeenSeq, counters, eventHistory[], halted}`. API keys are stored separately under `buildlife.keys` and are never included in the download.
 
 ---
 
@@ -214,6 +219,7 @@ These are the definitions JS calls. They're all ordinary definitions, and all of
 | `reflective-mind-system` | — | string | Every Sonnet call |
 | `reflective-mind-prompt` | state, history | string | Every Sonnet call |
 | `reflective-mind-trigger?` | state, events, since | boolean | After every Jev decision (`since` = `jevSinceSonnet`) |
+| `reflective-mind-compaction` | — | string (optional) | Each compaction: the summarizer's instructions. Missing means the API's default prompt; a failure or wrong type is a chat error and that compaction is skipped, never a repair |
 
 `history` is a list of recent event Records (the last `EVENT_HISTORY_N`) plus the decisions made, so prompts can describe recent life.
 
@@ -358,18 +364,47 @@ allowed when: no Sonnet or repair call in flight, not repairing or halted,
               and now - lastSonnetAt >= SONNET_MIN_GAP_MS
   (a user chat message skips reflective-mind-trigger? but still respects in-flight and the gap,
    queueing at most one pending user turn)
-system = reflective-mind-system() + CORE_PREAMBLE + full WorldSource      # one block, prompt-cached
-user   = reflective-mind-prompt(state, history) + last CHAT_HISTORY_N chat entries
-         (+ "the neighbour is waiting" when a user message is pending)
+system   = [CORE_PREAMBLE]                  cache breakpoint; never changes
+           [full WorldSource]              cache breakpoint; changes only on an edit
+           [reflective-mind-system()]      (D-39)
+messages = [assistant: conversation.block]                    if any
+           conversation.turns                                 user/assistant pairs, byte for byte
+           user: turn                                         cache breakpoint
+           system: reflective-mind-prompt(state, history)     the status; shown once, never stored
+                   (+ "the neighbour is waiting" when a user message is pending)
+turn     = chat entries with seq > lastSeenSeq, kinds user (as "neighbour"), edit, run, error, system;
+           the last CHAT_HISTORY_N of them, one "[kind] text" line each;
+           none: "(Nothing new in the chat. The world prompted this reflection.)"
 thinking = {adaptive, display: summarized}
 output_config.format = json_schema {summary, say, edits[{comment, source, delete}], run[{comment, source}], core_request}
 on send:  jevSinceSonnet = 0; the waiting-user flag clears
-on reply: chat reflective-mind-thought (summary, then the summarized thinking); if say: chat inhabitant;
+on reply: unless the conversation was cleared since sending:
+            conversation.turns += [user: turn, assistant: reply JSON text]; lastSeenSeq = chatSeq at send
+          chat reflective-mind-thought (summary, then the summarized thinking); if say: chat inhabitant;
           for each edit: apply-edit (author sonnet)
           then for each run: run once (author sonnet)
           if core_request: chat core-request (highlighted); append to requests
+          then the compaction rule
+on failure (API error, refusal, bad JSON): nothing is stored; the turn's entries go into the next turn
 ```
 `CORE_PREAMBLE` is core text that the models can't edit. It explains MIAL syntax, the entry-point contract, the host built-ins, the render contract, and the reply format. The reply is a JSON object under structured output rather than a tool call. There is no server-side fallback (Haiku 5.5 has none), so a refusal (reported with its `stop_details` category and explanation), a truncated reply, or invalid JSON is a chat error with no change. Nothing in the request asks for reasoning in the reply text: the reasoning comes back as summarized thinking blocks (D-31).
+
+### 4.9a Compaction *(core)* [D: on-demand server-side compaction, keeping recent turns]
+*Serves:* G-2, G-6. Keeps the conversation bounded (D-40).
+```
+after each stored reply, if no compaction is in flight and
+    chars(block.content) + chars(all turns) > COMPACT_AT_CHARS:
+  cut = the first pair boundary (after an assistant turn) where chars(block + turns before it) >= COMPACT_CHUNK_CHARS
+        (all turns if none)
+  request: same model, thinking and system blocks as the Sonnet call; no output_config.format;
+           messages = [block if any] + turns[0 .. cut); max_tokens COMPACT_MAX_TOKENS
+           compaction = {type: summarize, instructions: reflective-mind-compaction()}   # omitted when not defined
+  on reply with stop_reason compaction, unless the conversation was cleared meanwhile:
+           conversation = {block: the returned block, turns: turns[cut ..]}   # includes turns added meanwhile
+           chat memory "Condensed N earlier exchanges into a summary: …"; save
+  no summary, or a failed call: chat error; the conversation is unchanged (the next reply tries again)
+```
+Every Anthropic call carries the `compact-2026-09-04` beta header, since later calls carry the block. Compaction runs alongside reflections: it isn't gated by the call gap or the Sonnet in-flight flag, but only one runs at a time. Factory reset clears the conversation; new game and revert keep it.
 
 ### 4.10 Apply edit *(core)* [D: per definition, no validation]
 *Serves:* G-1, G-4.
@@ -404,8 +439,9 @@ on MIAL error (parse diagnostics that prevent loading, missing entry point, wron
   if repairStreak >= REPAIR_MAX: halted = true; chat system "halted"; stop
   repairStreak += 1
   if no Anthropic key: halted = true; stop
-  call Sonnet with CORE_REPAIR_PROMPT (fixed, ignores reflective-mind-system) + CORE_PREAMBLE + full source,
-       error in the user message, same reply format; apply its edits with author repair
+  call Sonnet with system [CORE_PREAMBLE][full source][CORE_REPAIR_PROMPT] (the same cached blocks as the
+       Sonnet call, but the fixed prompt in place of reflective-mind-system), the error as the only user
+       message, same reply format; apply its edits with author repair. It never sees or adds to the conversation
   when the call finishes (any outcome): resume ticking; a tick with no error sets repairStreak = 0
 ```
 A halted world stays halted until you revert (D-22), start a new game, or do a factory reset.
@@ -434,11 +470,11 @@ factory reset also clears requests; new game keeps them
 
 ### 5.2 Sonnet [D]
 *Serves:* G-1, G-2, G-6. "Sonnet" is the code name of the reflective mind (JS and these docs); the MIAL names it `reflective-mind-*` (`reflective-mind-system`, `reflective-mind-prompt`, `reflective-mind-trigger?`, core stats `reflective-mind-calls/edits/runs`). The model filling the role is `SONNET_MODEL` (Claude Haiku 5.5), shown in the UI as `SONNET_NAME`, and it's called directly from the browser.
-- **Sees:** `reflective-mind-system`, `reflective-mind-prompt`, the core preamble, the full WorldSource, and recent chat.
+- **Sees:** `reflective-mind-system`, `reflective-mind-prompt` (as the per-call status), the core preamble, the full WorldSource, and its conversation: a summary of older turns, then its recent turns word for word.
 - **Can do:** speak as the inhabitant, edit any definition (including the prompts and cadence of both models), run one-time functions on the live state, and request core changes.
 - **Can't do:** edit core JS, the core preamble, or the repair prompt. Can't change the core call-gap floors.
 - **Sees the whole world source on every call** [D]. Partitioning it is a future question once the source grows.
-- **Persistent memory:** none outside of MIAL. If it wants to remember something, it writes a definition (for example `# notes`) and refers to it from its own prompt [P].
+- **Memory:** its conversation (the Conversation entity), with older turns condensed by compaction under instructions it can rewrite (`reflective-mind-compaction`). For anything that must not be lost, it writes a definition (for example `# notes`) and refers to it from its own prompt [P].
 
 ### 5.3 Repair [D]
 This is Sonnet under the fixed repair prompt. Its only job is to make the world load and tick again.
@@ -480,7 +516,10 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | REPAIR_MAX | 3 | consecutive attempts | D-8 |
 | EVAL_STEP_LIMIT | 200000 | evaluation steps per entry-point call | D-8 |
 | EVENT_HISTORY_N | 30 | events | D-7 |
-| CHAT_HISTORY_N | 20 | entries | D-7 |
+| CHAT_HISTORY_N | 20 | new chat entries per user turn, at most | D-39 |
+| COMPACT_AT_CHARS | 20000 | characters of summary + turns | D-40 |
+| COMPACT_CHUNK_CHARS | 10000 | characters summarized, at least | D-40 |
+| COMPACT_MAX_TOKENS | 8000 | tokens | D-40 |
 | SAVE_EVERY_TICKS | 20 | ticks | D-11 |
 | SONNET_MAX_TOKENS | 16000 | tokens | D-7 |
 | JEV_MAX_TOKENS | 1024 | tokens | D-28 |
@@ -515,7 +554,7 @@ Every command checks that it's legal. An illegal command returns `{ok:false, rea
 Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it saves `world-v<version>.md`. Upload MIAL reads a chosen file and calls `uploadSource`.
 
 ### Read-only queries
-`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getRequests()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
+`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getRequests()`, `getConversation()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
 
 ### Events (core → UI)
 
@@ -529,6 +568,7 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 | `run-applied` | comment | Chat (`run`), canvas redraw |
 | `core-request` | text | Chat, highlighted |
 | `requests-changed` | requests | Requests count and dialog |
+| `compacted` | block, turns | Chat (`memory`) |
 | `mial-error` | message, definition | Chat (`error`) |
 | `repair-started` / `halted` | streak | Chat (`system`) |
 | `api-error` | provider, message | Chat (`error`) |

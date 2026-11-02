@@ -37,7 +37,9 @@ R-n, U-n, X-n), never section numbers.
   `jev-system`/`jev-prompt`/`jev-trigger?`, `reflective-mind-system`/`reflective-mind-prompt`/`reflective-mind-trigger?`), wrapped with type
   checks in `world.js`. The UI (`main.js`) uses only game commands, queries and events.
 - Two minds: Jev (OpenRouter, JSON schema with an action enum) picks actions; the reflective mind replies with
-  `{summary, say, edits, run, core_request}` via structured output. In MIAL its names are `reflective-mind-*`; JS still calls it "Sonnet" but it runs
+  `{summary, say, edits, run, core_request}` via structured output. Its calls form one stored conversation (system
+  blocks preamble → source → role prompt, then turns, then the status as a trailing system message), condensed by
+  Anthropic's on-demand compaction past COMPACT_AT_CHARS; thinking is never replayed. In MIAL its names are `reflective-mind-*`; JS still calls it "Sonnet" but it runs
   `BL.CONFIG.SONNET_MODEL` (currently Claude Haiku); `SONNET_NAME` is the UI label. Request building and parsing,
   plus the uneditable `CORE_PREAMBLE`, are in `minds.js`; network calls in `api.js`.
 - Edits replace/append/delete whole `# definitions` with no validation; every stored version is reprinted in compact

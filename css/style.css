@@ -246,6 +246,7 @@ body {
 .msg-core-request { border: 1px solid var(--warn); border-left-width: 3px; background: var(--core-request-bg); }
 .msg-error { border-left-color: var(--danger); color: var(--danger-text); font-size: 13px; }
 .msg-system { border-left-color: var(--muted); color: var(--muted); font-size: 12px; }
+.msg-memory { border-left: 3px dashed var(--sonnet); color: var(--muted); font-size: 12px; }
 
 .chat-form {
   display: flex;

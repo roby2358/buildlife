@@ -27,10 +27,25 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ## Minds
 
+### D-39 The reflective mind keeps a conversation; the prompt is laid out for the cache — *Decided*
+- **Intent:** your call. It used to see only the last 20 chat lines, rebuilt each call, so it forgot anything older and nothing in the user part could be cached.
+- **Shape:** system blocks `[CORE_PREAMBLE][world source][reflective-mind-system]`, with breakpoints after the first two: the preamble never changes, and the source changes only on an edit (you said "periodically, but not often"). Then the conversation, the new user turn (third breakpoint), and the status from `reflective-mind-prompt` as a mid-conversation system message, last. Putting `reflective-mind-system` after the source rather than in the same block as it caches the same way for reflections, and lets repair calls share both breakpoints.
+- **User turns are what reached the mind:** your words and the results of its edits and runs, errors and notices, since its last reply. Its own words are already in its turns, and Jev's decisions are in the status.
+- **No thinking in the history:** the API keeps replayed thinking valid only while `system` stays the same, and ours changes with every edit. Replaying it would make each edit drop it anyway (or fail with a 400 on newer accounts). Assistant turns are the reply's JSON text; the summarized thinking still shows in the chat.
+- **The status isn't stored:** it sits after the last breakpoint, so leaving it out of the next call costs no cache. That avoids the `clear_at` beta.
+- **Alternatives:** stateless calls with a longer chat window (rejected: no cache and a hard memory cliff); storing thinking with `prefix_mismatch_behavior: drop_block` (rejected: needs another beta and drops it on most edits anyway).
+
+### D-40 Old turns are condensed by Anthropic's on-demand compaction, keeping the recent half — *Decided (mechanism) / Proposed (numbers)*
+- **Intent:** your design: when the turns reach about 20,000 characters, summarize the oldest 10,000 out of band and drop them. On-demand compaction with kept recent turns (beta `compact-2026-09-04`) does exactly that, and the summary is written server-side and returned as a signed block.
+- **Shape:** the core decides when (COMPACT_AT_CHARS = 20000 counting the summary and turns, COMPACT_CHUNK_CHARS = 10000, cut after an assistant turn). The request reuses the conversation's system blocks, so it hits the cache. The optional MIAL definition `reflective-mind-compaction` supplies the summarizer's instructions, so the inhabitant decides how it forgets, while the core makes sure it does. The default world ships one.
+- **Shown:** each summary appears in the chat as a `memory` entry.
+- **Alternatives:** threshold compaction inside ordinary requests (rejected: it can't keep recent turns' thinking and the docs prefer on-demand); asking the mind for a `memory` field (rejected: more code for the same thing); letting the MIAL own the threshold too (rejected: a world that never compacts would grow until saves fail).
+- **Numbers:** a first guess. COMPACT_AT_CHARS ≈ 5k tokens, small next to the source; revisit with live sessions.
+
 ### D-36 Sonnet can run a one-time function on the live state — *Decided*
 - **Intent:** lower the barrier to building (your call). `initial-state` only runs on a new game, so changing the running world meant either asking for a restart or writing a permanent `tick` wrapper that adds the thing if it's missing. Two Haiku instances each asked for a restart; two others each tried `initial-state`, saw it do nothing, and invented `ensure-*` wrappers.
 - **Shape:** a `run` list in the reply, each `{comment, source}`, where the first definition takes the state and returns the new one. It's called once after the reply's edits with the world's definitions in scope, then discarded. A field in the structured reply, not a real tool call, because the reply is already one JSON object (4.9) and a tool round trip would add a turn.
-- **Failure:** a chat error and no change. Not the repair rule: the world source isn't broken, and the error reaches Sonnet through recent chat.
+- **Failure:** a chat error and no change. Not the repair rule: the world source isn't broken, and the error reaches Sonnet in its next user turn.
 - **Wonder:** in the default world a successful Sonnet run counts like an edit (`core.reflective-mind-runs`), so building through a run is still creating. That's world MIAL and the models may change it.
 - **Alternatives:** a hint in the preamble only (rejected: still a per-tick wrapper forever); a `migrate` entry point called after each edit (rejected: still an edit-and-delete dance for a one-off); letting edits carry a state patch (rejected: mixes two kinds of change in the edit list).
 - **Not reverted:** `revertTo` restores source, not state, so a run stays. Same as any tick.
@@ -174,7 +189,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Intent:** your call. Requests scroll away in the chat (and the chat is capped at MAX_CHAT), and they're your to-do list for the core.
 - **Shape:** every non-empty `core_request` is also appended to `requests` in the save, shown by the Requests button with a count. Each has an ✕ that deletes it. Deleting is UI bookkeeping only: the inhabitant isn't told, and the chat entry stays. A factory reset clears the list; a new game keeps it.
 
-### D-23 Every Sonnet call includes the whole world source — *Decided*
+### D-23 Every Sonnet call includes the whole world source — *Decided* (as its own cached system block since D-39)
 - **Alternatives:** send only the relevant definitions; send an index plus on-request reads.
 - **Why:** Sonnet can't edit what it can't see, and the world is small. Partitioning is a future design question once the source grows (around 20 KB).
 

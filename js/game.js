@@ -23,13 +23,17 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     editLog: [],       // Edit
     chat: [],          // ChatEntry
     requests: [],      // CoreRequest {text, at, tick}, until the user deletes them
+    conversation: { block: null, turns: [] }, // the reflective mind's history (D-39, D-40)
+    chatSeq: 0,        // every chat entry gets the next seq
+    lastSeenSeq: 0,    // chat entries up to this seq are already in a user turn
+    convEpoch: 0,      // bumped when the conversation is cleared, so late replies are discarded
     eventHistory: [],  // recent events and decisions (JS objects)
     counters: freshCounters(),
     halted: false,
     running: false,
     repairing: false,
     userWaiting: false,
-    inFlight: { jev: false, sonnet: false, repair: false },
+    inFlight: { jev: false, sonnet: false, repair: false, compact: false },
     settings: { jevGapMs: C.JEV_MIN_GAP_MS, sonnetGapMs: C.SONNET_MIN_GAP_MS },
     warnedMissingKey: {},
   };
@@ -41,7 +45,8 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const stamp = () => ({ at: new Date(now()).toISOString(), tick: tickNow() });
 
   const addChat = (kind, text) => {
-    const entry = { kind, text, ...stamp() };
+    g.chatSeq += 1;
+    const entry = { kind, text, seq: g.chatSeq, ...stamp() };
     g.chat.push(entry);
     if (g.chat.length > C.MAX_CHAT) g.chat.splice(0, g.chat.length - C.MAX_CHAT);
     emit('chat', entry);
@@ -56,6 +61,9 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     editLog: g.editLog,
     chat: g.chat,
     requests: g.requests,
+    conversation: g.conversation,
+    chatSeq: g.chatSeq,
+    lastSeenSeq: g.lastSeenSeq,
     counters: g.counters,
     eventHistory: g.eventHistory,
     halted: g.halted,
@@ -201,11 +209,14 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     if (g.inFlight.sonnet || g.inFlight.repair || g.repairing || g.halted) return false;
     if (now() - g.counters.lastSonnetAt < g.settings.sonnetGapMs) return false;
     if (needsKey('sonnet')) return false;
+    const seqAtSend = g.chatSeq;
     const req = minds.buildSonnet({
-      loaded: g.loaded, state: g.state, history: g.eventHistory, chat: g.chat,
+      loaded: g.loaded, state: g.state, history: g.eventHistory,
       source: g.source, version: g.version, userWaiting: g.userWaiting,
+      conversation: g.conversation, entries: g.chat.filter(e => e.seq > g.lastSeenSeq),
     });
     if (!req.ok) { mialError(req); return false; }
+    const sent = { turn: req.turn, seqAtSend, epoch: g.convEpoch };
     g.inFlight.sonnet = true;
     g.userWaiting = false;
     g.counters.lastSonnetAt = now();
@@ -213,15 +224,19 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     g.counters.jevSinceSonnet = 0;
     emit('changed');
     api.sonnet(req.body)
-      .then(resp => handleSonnetReply(resp, 'sonnet'))
+      .then(resp => handleSonnetReply(resp, 'sonnet', sent))
       .catch(err => apiError('sonnet', err))
       .finally(() => { g.inFlight.sonnet = false; emit('changed'); });
     return true;
   };
 
-  const handleSonnetReply = (resp, author) => {
+  const handleSonnetReply = (resp, author, sent) => {
     const parsed = minds.parseSonnet(resp);
-    if (!parsed.ok) { addChat('error', parsed.error); return; }
+    if (!parsed.ok) { addChat('error', parsed.error); return; } // the turn isn't stored; its entries go in the next one
+    if (sent && sent.epoch === g.convEpoch) {
+      g.conversation.turns.push({ role: 'user', content: sent.turn }, { role: 'assistant', content: parsed.text });
+      g.lastSeenSeq = sent.seqAtSend;
+    }
     const reflection = [parsed.summary, parsed.thinking && `Thinking: ${parsed.thinking}`].filter(Boolean).join('\n\n');
     if (reflection) addChat('reflective-mind-thought', reflection);
     if (parsed.say) addChat('inhabitant', parsed.say);
@@ -235,6 +250,47 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       emit('requests-changed', g.requests);
     }
     save();
+    maybeCompact();
+  };
+
+  // --- Compaction rule (D-40) ----------------------------------------------
+
+  const conversationChars = () => (g.conversation.block ? String(g.conversation.block.content || '').length : 0) +
+    g.conversation.turns.reduce((n, t) => n + String(t.content).length, 0);
+
+  // The cut falls after an assistant turn, once the summary plus the turns before it reach COMPACT_CHUNK_CHARS.
+  const compactionCut = () => {
+    let chars = g.conversation.block ? String(g.conversation.block.content || '').length : 0;
+    const turns = g.conversation.turns;
+    for (let i = 1; i < turns.length; i += 2) {
+      chars += String(turns[i - 1].content).length + String(turns[i].content).length;
+      if (chars >= C.COMPACT_CHUNK_CHARS) return i + 1;
+    }
+    return turns.length;
+  };
+
+  const maybeCompact = () => {
+    if (g.inFlight.compact || conversationChars() <= C.COMPACT_AT_CHARS || !api.canCall('sonnet')) return false;
+    const cut = compactionCut();
+    const req = minds.buildCompaction({ loaded: g.loaded, source: g.source, version: g.version, conversation: g.conversation, cut });
+    if (!req.ok) { addChat('error', `Compaction skipped: ${req.error}`); return false; }
+    const epoch = g.convEpoch;
+    g.inFlight.compact = true;
+    g.counters.compactions = (g.counters.compactions || 0) + 1;
+    api.sonnet(req.body)
+      .then(resp => {
+        if (epoch !== g.convEpoch) return; // cleared meanwhile
+        const r = minds.parseCompaction(resp);
+        if (!r.ok) { addChat('error', r.error); return; }
+        // Turns only ever append, so the first `cut` are exactly the ones summarized.
+        g.conversation = { block: r.block, turns: g.conversation.turns.slice(cut) };
+        addChat('memory', `Condensed ${cut / 2} earlier exchange${cut === 2 ? '' : 's'} into a summary:\n${r.block.content || ''}`);
+        emit('compacted', { block: r.block, turns: cut });
+        save();
+      })
+      .catch(err => apiError('sonnet', err))
+      .finally(() => { g.inFlight.compact = false; emit('changed'); });
+    return true;
   };
 
   // --- Commands ----------------------------------------------------------
@@ -376,6 +432,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     store.clearGame();
     Object.assign(g, {
       source: '', version: 0, versions: [], editLog: [], chat: [], requests: [], eventHistory: [],
+      conversation: { block: null, turns: [] }, chatSeq: 0, lastSeenSeq: 0, convEpoch: g.convEpoch + 1,
       halted: false, repairing: false, userWaiting: false, state: null,
     });
     g.counters = freshCounters();
@@ -433,6 +490,10 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
         editLog: saved.editLog || [],
         chat: saved.chat || [],
         requests: saved.requests || [],
+        conversation: saved.conversation || { block: null, turns: [] },
+        // Saves from before the conversation start it fresh: none of the old chat is replayed.
+        chatSeq: saved.chatSeq || 0,
+        lastSeenSeq: saved.conversation ? saved.lastSeenSeq || 0 : saved.chatSeq || 0,
         eventHistory: saved.eventHistory || [],
         halted: !!saved.halted,
         state: saved.state,
@@ -455,6 +516,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     getVersions: () => g.versions,
     getChat: () => g.chat,
     getRequests: () => g.requests,
+    getConversation: () => g.conversation,
     getCounters: () => ({ ...g.counters, inFlight: { ...g.inFlight } }),
     getSettings: () => ({ ...g.settings }),
     getEventHistory: () => g.eventHistory,

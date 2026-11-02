@@ -54,6 +54,8 @@ BL.world = (() => {
     sonnetSystem: (l) => call(l, 'reflective-mind-system', [], 'string'),
     sonnetPrompt: (l, state, history) => call(l, 'reflective-mind-prompt', [state, M.fromJS(history)], 'string'),
     sonnetTrigger: (l, state, events, since) => call(l, 'reflective-mind-trigger?', [state, events, M.node(since)], 'truthy'),
+    // Optional: undefined when the world doesn't define it (the API's own summary prompt is used).
+    compactionInstructions: (l) => (l.env.vars['reflective-mind-compaction'] === undefined ? undefined : call(l, 'reflective-mind-compaction', [], 'string')),
   };
 
   // The current tick's events: as MIAL (for trigger calls) and as JS objects ([] when absent or malformed).

@@ -53,6 +53,7 @@ BL.createApi = (getKeys) => {
       'x-api-key': getKeys().anthropic.trim(),
       'anthropic-version': '2026-10-21',
       'anthropic-dangerous-direct-browser-access': 'true',
+      'anthropic-beta': 'compact-2026-09-04', // on-demand compaction and the summary block it returns (D-40)
       'content-type': 'application/json',
     }, body),
   };

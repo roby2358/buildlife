@@ -25,6 +25,10 @@ BL.createFakeApi = () => {
       return delay('Jev', body, { choices: [{ message: { content: JSON.stringify({ thought: `(fake) my ${action} need is calling`, action }) } }] });
     },
     sonnet: (body) => {
+      if (body.compaction) {
+        const n = body.messages.filter(m => m.role === 'assistant').length;
+        return delay(`${BL.CONFIG.SONNET_NAME} compaction`, body, { stop_reason: 'compaction', content: [{ type: 'compaction', content: `(fake) A summary of ${n} earlier replies.`, signature: 'fake' }] });
+      }
       sonnetCalls += 1;
       const reply = {
         summary: `(fake) reflection number ${sonnetCalls}.`,

@@ -26,7 +26,7 @@ Your world is written in MarkdownIsALisp (MIAL), a Lisp whose syntax is Markdown
 The core calls these definitions (keep their names and parameters, or the world breaks):
 | definition | parameters | must return |
 |---|---|---|
-| initial-state | none | a record (only when a new game starts; to change the running world, use run) |
+| initial-state | none | a record (used only when this game started; to change the running world, use run) |
 | tick | state | the next state record; its "events" field holds this tick's events |
 | actions | state | a list of strings: the choices Jev may pick |
 | apply-action | state, action | a state record |
@@ -36,10 +36,14 @@ The core calls these definitions (keep their names and parameters, or the world 
 | reflective-mind-system | none | your own system prompt (string) |
 | reflective-mind-prompt | state, history | your own prompt (string) |
 | reflective-mind-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
+| reflective-mind-compaction | none | optional: instructions for condensing your oldest conversation turns into a summary (string, at most 16384 characters) |
 
 The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, jev-decisions, jev-invalid, jev-retries, reflective-mind-calls, repairs, reflective-mind-edits, reflective-mind-runs, world-version). Anything you write there is overwritten.
 Keep statistics about the world itself in your own MIAL, for example a record counting the ticks each need spends below the low threshold, so they follow your rules if you change them.
 The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every few seconds or you more often than every few seconds, whatever your triggers say.
+
+## Your conversation
+Your reflections form one conversation. Each user turn holds what reached you since your last reply: the neighbour's words, the results of your edits and runs, errors and other notices. The system message after the newest user turn is your reflective-mind-prompt, the world as it is now; it is shown once and not kept. Your earlier replies are kept as your turns, as the JSON you sent. When the conversation grows long, the core condenses its oldest turns into a summary that comes first, using reflective-mind-compaction as instructions if you define it. Only the summary and the turns after it remain, so write anything you must not lose into your MIAL.
 
 ## How to reply
 Reply with one JSON object:
@@ -145,41 +149,94 @@ Your only job is to make it load and tick again with as little change as possibl
     return { ok: true, action: data.action, thought: typeof data.thought === 'string' ? data.thought : '' };
   };
 
-  const chatLine = (e) => `[${e.kind}] ${e.text}`;
-
-  // The system text changes only when the world is edited, so it is the cached prefix.
   // Reasoning comes back as summarized thinking blocks. Asking for it in the reply text
   // gets requests declined as reasoning_extraction (D-31).
-  const sonnetBody = (system, user) => ({
+  const sonnetBody = (system) => ({
     model: C.SONNET_MODEL,
     max_tokens: C.SONNET_MAX_TOKENS,
     thinking: { type: 'adaptive', display: 'summarized' },
-    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
-    messages: [{ role: 'user', content: user }],
+    system,
     output_config: { format: { type: 'json_schema', schema: SONNET_SCHEMA } },
   });
 
   const sourceSection = (source, version) => `## Current world source (version ${version})\n\n${source}`;
 
-  // Sonnet call rule: reflective-mind-system + core preamble + full source; reflective-mind-prompt + recent chat.
-  const buildSonnet = ({ loaded, state, history, chat, source, version, userWaiting }) => {
+  // Cache layout (D-39): the preamble never changes and the source changes only on an edit,
+  // so each ends a cached prefix. The role prompt follows; the repair call shares both breakpoints.
+  const cached = (text) => ({ type: 'text', text, cache_control: { type: 'ephemeral' } });
+  const systemBlocks = (source, version, rolePrompt) =>
+    [cached(CORE_PREAMBLE), cached(sourceSection(source, version)), { type: 'text', text: rolePrompt }];
+
+  // Conversation rule: the stored history is the latest summary block (if any), then complete
+  // user/assistant pairs of plain text. Thinking is never replayed (D-39).
+  const historyMessages = (conversation) => [
+    ...(conversation && conversation.block ? [{ role: 'assistant', content: [conversation.block] }] : []),
+    ...((conversation && conversation.turns) || []).map(t => ({ role: t.role, content: t.content })),
+  ];
+
+  // The user turn: chat entries that reached the mind since its last reply, minus its own words and Jev's.
+  const TURN_KINDS = { user: 'neighbour', edit: 'world edit', run: 'run once', error: 'error', system: 'system' };
+  const turnText = (entries) => {
+    const lines = entries.filter(e => TURN_KINDS[e.kind]).slice(-C.CHAT_HISTORY_N).map(e => `[${TURN_KINDS[e.kind]}] ${e.text}`);
+    return lines.length ? lines.join('\n') : '(Nothing new in the chat. The world prompted this reflection.)';
+  };
+
+  // Sonnet call rule: three system blocks, the conversation, the new user turn (cached), and the
+  // world status as a system message that is shown once and not stored.
+  const buildSonnet = ({ loaded, state, history, source, version, userWaiting, conversation, entries }) => {
     const system = W.sonnetSystem(loaded);
     if (!system.ok) return fail(system);
     const prompt = W.sonnetPrompt(loaded, state, history);
     if (!prompt.ok) return fail(prompt);
-    const recent = chat.slice(-C.CHAT_HISTORY_N).map(chatLine).join('\n') || '(no chat yet)';
-    const user = `${prompt.value}\n\n## Recent chat\n${recent}` +
-      (userWaiting ? '\n\nThe neighbour has just spoken to you and is waiting for a reply.' : '');
-    return { ok: true, body: sonnetBody(`${system.value}\n\n${CORE_PREAMBLE}\n\n${sourceSection(source, version)}`, user) };
+    const turn = turnText(entries || []);
+    const status = prompt.value + (userWaiting ? '\n\nThe neighbour has just spoken to you and is waiting for a reply.' : '');
+    return {
+      ok: true,
+      turn,
+      body: {
+        ...sonnetBody(systemBlocks(source, version, system.value)),
+        messages: [
+          ...historyMessages(conversation),
+          { role: 'user', content: [cached(turn)] },
+          { role: 'system', content: status },
+        ],
+      },
+    };
   };
 
-  // Repair rule: fixed prompt, ignores reflective-mind-system.
+  // Compaction rule (D-40): summarize the oldest `cut` turns (and any earlier summary) with the
+  // same system blocks as the conversation, so the summarizer reads the same world and hits the cache.
+  const buildCompaction = ({ loaded, source, version, conversation, cut }) => {
+    const system = W.sonnetSystem(loaded);
+    if (!system.ok) return fail(system);
+    const instr = W.compactionInstructions(loaded);
+    if (instr && !instr.ok) return fail(instr);
+    const body = {
+      model: C.SONNET_MODEL,
+      max_tokens: C.COMPACT_MAX_TOKENS,
+      thinking: { type: 'adaptive', display: 'summarized' },
+      system: systemBlocks(source, version, system.value),
+      messages: historyMessages({ block: conversation.block, turns: conversation.turns.slice(0, cut) }),
+      compaction: { type: 'summarize', ...(instr && instr.value.trim() ? { instructions: instr.value } : {}) },
+    };
+    return { ok: true, body };
+  };
+
+  const parseCompaction = (resp) => {
+    const block = resp && Array.isArray(resp.content) && resp.content.find(b => b && b.type === 'compaction');
+    if (!resp || resp.stop_reason !== 'compaction' || !block) {
+      return { ok: false, error: `Compaction returned no summary (stop_reason: ${resp && resp.stop_reason})` };
+    }
+    return { ok: true, block };
+  };
+
+  // Repair rule: fixed prompt instead of reflective-mind-system (which may be what broke).
   const buildRepair = ({ source, version, error, definition }) => ({
     ok: true,
-    body: sonnetBody(
-      `${CORE_REPAIR_PROMPT}\n\n${CORE_PREAMBLE}\n\n${sourceSection(source, version)}`,
-      `The world failed${definition ? ` in "# ${definition}"` : ''} with this error:\n${error}\n\nFix it.`,
-    ),
+    body: {
+      ...sonnetBody(systemBlocks(source, version, CORE_REPAIR_PROMPT)),
+      messages: [{ role: 'user', content: `The world failed${definition ? ` in "# ${definition}"` : ''} with this error:\n${error}\n\nFix it.` }],
+    },
   });
 
   const parseSonnet = (resp) => {
@@ -207,11 +264,12 @@ Your only job is to make it load and tick again with as little change as possibl
       summary: String(data.summary || ''),
       thinking,
       say: String(data.say || ''),
+      text, // the reply as sent, kept as the assistant turn
       edits,
       runs,
       coreRequest: String(data.core_request || ''),
     };
   };
 
-  return { CORE_PREAMBLE, CORE_REPAIR_PROMPT, SONNET_SCHEMA, buildJev, parseJev, buildSonnet, buildRepair, parseSonnet };
+  return { CORE_PREAMBLE, CORE_REPAIR_PROMPT, SONNET_SCHEMA, buildJev, parseJev, turnText, buildSonnet, buildCompaction, parseCompaction, buildRepair, parseSonnet };
 })();

@@ -2,6 +2,11 @@
 
 Newest first.
 
+### 2026-11-02: The reflective mind keeps a conversation, condensed by compaction
+- Calls to the reflective mind now form one conversation (D-39, R-28): system blocks `[preamble][source][reflective-mind-system]` with cache breakpoints after the first two, then the stored turns, the new user turn (third breakpoint), and the `reflective-mind-prompt` status as a mid-conversation system message that's never stored. User turns carry the new chat entries (your words, edit and run results, errors) instead of the last 20 chat lines. Replies are stored as JSON text; thinking isn't replayed, because edits change `system` and would invalidate it. Repair calls share the first two cached blocks.
+- When the conversation passes 20,000 characters, the oldest 10,000 or more are condensed with Anthropic's on-demand compaction (beta `compact-2026-09-04`, now sent on every Anthropic call), keeping the recent turns word for word (D-40, R-29). The summary block goes first; a new `memory` chat kind shows it. The new optional MIAL definition `reflective-mind-compaction` gives the summarizer's instructions, and the default world has one. Its `reflective-mind-system` now says the conversation is kept but condensed.
+- CORE_PREAMBLE gained a "Your conversation" section and the new definition in its table. New core constants COMPACT_AT_CHARS, COMPACT_CHUNK_CHARS and COMPACT_MAX_TOKENS; CHAT_HISTORY_N now caps the new entries in one user turn. Saves from before this start with an empty conversation and don't replay the old chat.
+
 ### 2026-11-01: Upload MIAL and a Requests list
 - New toolbar button Upload MIAL: a chosen file becomes the next version (author `user`, "upload <name>"), revertable, with the state kept (your call; D-37, R-26). New command `uploadSource`.
 - New toolbar button Requests (n): the inhabitant's core requests, saved in `requests` and each removable with ✕ (your call; D-38, R-27). New command `deleteRequest`, query `getRequests`, event `requests-changed`. Saves from before this start with an empty list.

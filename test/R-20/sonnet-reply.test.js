@@ -33,7 +33,7 @@ test('summary and summarized thinking are shown together', async () => {
 test('requests ask for summarized thinking and never for reasoning in the reply text', () => {
   const { BL, game } = makeGame();
   const loaded = BL.world.load(game.getSource());
-  const req = BL.minds.buildSonnet({ loaded, state: game.getState(), history: [], chat: [], source: game.getSource(), version: 1 });
+  const req = BL.minds.buildSonnet({ loaded, state: game.getState(), history: [], source: game.getSource(), version: 1 });
   assert.deepEqual(req.body.thinking, { type: 'adaptive', display: 'summarized' });
   assert.deepEqual(Object.keys(req.body.output_config.format.schema.properties), ['summary', 'say', 'edits', 'run', 'core_request']);
   assert.doesNotMatch(BL.minds.CORE_PREAMBLE, /private reflection|your thinking/i);

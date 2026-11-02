@@ -1,0 +1,27 @@
+Priority:   95
+Status: ToDo
+ID: actor-rename-nun8
+Created: 2026-11-01T23:15:37Z
+Updated: 2026-11-01T23:15:37Z
+
+BuildLife: rename the fast mind's MIAL names from jev-* to actor-*, matching the earlier sonnet-* → reflective-mind-* rename, so the names say the role and not the model.
+- Entry points: jev-system, jev-prompt, jev-trigger? become actor-system, actor-prompt, actor-trigger?. Also the helper jev-notes and the core stats jev-decisions, jev-invalid and jev-retries.
+- Places to update: js/world.js (entry table), js/minds.js (CORE_PREAMBLE table and the stats list), js/game.js (coreStats keys), world/default_world.md (then run npm run embed), js/fake_api.js, tests (R-8, R-14, R-18, browser.js and any others that grep for jev-), tools/tune.js.
+- Docs: ONTOLOGY, CRITERIA, CLAUDE.md, plus a dated ARCHITECTURE_LOG entry saying old saves and downloads need the names changed or a factory reset.
+- Decide whether to also change the chat kind 'jev', the event 'jev-decision' and the UI label, or to keep "Jev" as the model name the way JS internals kept "Sonnet".
+- Done when npm test and node test/browser.js both pass.
+----
+Priority:   50
+Status: ToDo
+ID: actor-wonder-uc7z
+Created: 2026-11-01T23:16:45Z
+Updated: 2026-11-01T23:16:45Z
+
+BuildLife: show the wonder meter to the fast mind (Jev, to be renamed actor-). Today the default world's describe-meters in world/default_world.md drops "wonder" on purpose, so Jev's needs line shows food, water, rest and wood only.
+- Remove that filter (or replace it) so wonder appears in jev-prompt / actor-prompt.
+- jev-system / actor-system should then say what wonder is and that Jev can't refill it: only the reflective mind's edits and runs do. Otherwise Jev may waste actions trying.
+- Run npm run embed afterwards.
+- R-21 currently expects "Jev's needs line doesn't mention wonder". Update that criterion and its test, and the wonder rule in ONTOLOGY.
+- Add a RATIONALE note and a dated ARCHITECTURE_LOG entry.
+- Live worlds keep their own source, so they only get this after the reflective mind edits it, or after a factory reset.
+- Done when npm test and node test/browser.js pass.

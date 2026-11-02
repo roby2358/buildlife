@@ -12,7 +12,8 @@ test('a broken tick starts a repair with the core repair prompt', () => {
   assert.ok(game.isRepairing());
   const call = api.calls.at(-1);
   assert.strictEqual(call.provider, 'sonnet');
-  assert.ok(call.body.system[0].text.startsWith(BL.minds.CORE_REPAIR_PROMPT));
+  assert.strictEqual(call.body.system[2].text, BL.minds.CORE_REPAIR_PROMPT);
+  assert.strictEqual(call.body.system[0].text, BL.minds.CORE_PREAMBLE, 'shares the cached preamble and source blocks');
   assert.match(call.body.messages[0].content, /explode/);
   assert.strictEqual(game.tickOnce().ok, false, 'ticking paused while repairing');
 });

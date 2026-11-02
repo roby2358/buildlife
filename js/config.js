@@ -8,7 +8,10 @@ BL.CONFIG = {
   SONNET_MIN_GAP_MS: 10000,    // default; adjustable in settings (D-12)
   REPAIR_MAX: 3,
   EVENT_HISTORY_N: 30,
-  CHAT_HISTORY_N: 20,
+  CHAT_HISTORY_N: 20,          // most new chat entries carried into one user turn
+  COMPACT_AT_CHARS: 20000,     // conversation size (summary + turns) that triggers compaction (D-40)
+  COMPACT_CHUNK_CHARS: 10000,  // at least this much of the oldest conversation is summarized
+  COMPACT_MAX_TOKENS: 8000,
   SAVE_EVERY_TICKS: 20,
   MAX_CHAT: 500,
   MAX_VERSIONS: 200,
