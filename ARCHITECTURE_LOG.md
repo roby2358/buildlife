@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-02: The default world ships Sonnet's builder checklist
+A Sonnet inhabitant wrote `builder-notes`, a five-step checklist for adding a place (run, `go-X`, `actions`, `auto-mind-system`, backticks), and added it to its own `reflective-mind-prompt`. The default world now starts with both, in Sonnet's words (your call). The inhabitant can edit or drop them like any definition.
+
 ### 2026-11-02: Choose the reflective mind's model; least thinking for each
 New Settings menu: Haiku 5.5 (default), Sonnet 5.5 or Opus 5.5 (your call; D-43, R-30, U-10). Each runs with the least thinking it allows: Haiku `disabled`, Sonnet `between_tools`, Opus adaptive at `effort: low`, which also sends server-side refusal fallback. So Haiku no longer thinks either. Repair and compaction follow the choice. `REFLECTIVE_MODELS` in config replaces `SONNET_NAME`; labels in the toolbar, chat and messages follow the chosen model. The pjpd model-switch task is done in this form (no separate thinking switch).
 

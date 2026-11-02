@@ -622,10 +622,14 @@
 # reflective-mind-compaction
 - text `"Summarize the earlier conversation between the neighbour and the inhabitant's reflective mind."` `"Keep what the neighbour asked for or told you, what you promised, what you built or changed and why, what failed, and what you meant to do next."` `"Write it as your own memory, in first person. Do not call tools; reply with the summary text only."`
 
+# builder-notes
+- `"CHECKLIST for every new place: 1) add it with a run (structure name x y meter rate, then put emoji). 2) write a go-X function using go-to. 3) add go-X to actions. 4) mention it in auto-mind-system. 5) ALWAYS put backticks around string and number literals; a bare word is read as a symbol and fails as undefined symbol."`
+
 # reflective-mind-prompt
 - * state history
 - text `"Current world state:"`
   - str state
   - `"Recent events and decisions:"`
   - describe-history history
+  - + `"My builder notes: "` builder-notes
   - `"Reflect on how life is going, and change the world if you want to."`
