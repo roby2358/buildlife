@@ -11,6 +11,28 @@ BuildLife: rename the fast mind's MIAL names from jev-* to actor-*, matching the
 - Decide whether to also change the chat kind 'jev', the event 'jev-decision' and the UI label, or to keep "Jev" as the model name the way JS internals kept "Sonnet".
 - Done when npm test and node test/browser.js both pass.
 ----
+Priority:   60
+Status: ToDo
+ID: model-switch-79he
+Created: 2026-11-02T02:46:31Z
+Updated: 2026-11-02T02:46:31Z
+
+BuildLife: add a Settings control for the reflective mind's model (Haiku 5.5 / Sonnet 5.5 / Opus 5.5) and a "Thinking: on / off" switch, so you can compare models without code changes.
+- Today the model is fixed in js/config.js (SONNET_MODEL = claude-haiku-5-5, SONNET_NAME = Haiku). Store the choice with the other settings; never in the save.
+- The toolbar label and the chat label should follow the chosen model.
+- Show the rough cost per reflection next to each model: Haiku ~$0.002, Sonnet ~$0.04, Opus ~$0.08 (prices $0.10/$0.50, $2/$10 and $4/$20 per million tokens in/out).
+- Thinking off differs per model:
+  - Haiku 5.5: thinking {type: "disabled"}, allowed only at effort medium or below.
+  - Sonnet 5.5: thinking {type: "between_tools"}, with no other fields, at effort high or below. "disabled" returns a 400 on Sonnet 5.5.
+  - Opus 5.5: thinking can't be disabled (400). "Off" means output_config.effort "low"; the UI should say so.
+- Thinking on keeps today's {type: "adaptive", display: "summarized"}. Consider setting effort "medium" for Sonnet, since its default is high.
+- With thinking off, the chat shows only the summary, with no "Thinking:" part.
+- Apply the same settings to compaction and repair requests.
+- Optional, Sonnet only: server-side refusal fallback (fallbacks: "default" with beta header server-side-fallback-2026-07-01). Haiku has none.
+- Switching models starts a fresh prompt cache, which caches are per model; the conversation carries over.
+- Optional extra: a running estimate of session spend from each reply's usage, shown in Stats or the toolbar.
+- Docs: D-17 (model choice), ONTOLOGY settings and the Sonnet call rule, CRITERIA. R-20 currently asserts thinking {adaptive, summarized}; update it and add a test per model/thinking combination. Add a dated ARCHITECTURE_LOG entry.
+----
 Priority:   50
 Status: ToDo
 ID: actor-wonder-uc7z
