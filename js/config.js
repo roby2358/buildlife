@@ -15,8 +15,7 @@ BL.CONFIG = {
   SAVE_EVERY_TICKS: 20,
   MAX_CHAT: 500,
   MAX_VERSIONS: 200,
-  JEV_MODEL: 'typesafe/jev-router',
-  JEV_MAX_TOKENS: 1024,
+  JEV_MODEL: 'typesafe/jev-1.14', // System One: returns a choice and probabilities, never text (D-41)
   // "Sonnet" is the role name of the reflective mind (reflective-mind-system, reflective-mind-prompt, ...);
   // the model filling the role, and the name the UI shows, are these two (D-17).
   SONNET_MODEL: 'claude-haiku-5-5',

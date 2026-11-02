@@ -22,7 +22,7 @@ test('no Jev call inside the minimum gap', async () => {
   const { game, api, clock } = makeGame();
   eager(game);
   game.tickOnce();
-  api.calls[0].resolve(jevReply('idle'));
+  api.calls[0].resolve(jevReply('stay'));
   await flush();
   clock.t += game.getSettings().jevGapMs - 1;
   game.tickOnce();

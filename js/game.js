@@ -189,11 +189,12 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       addChat('error', parsed.error);
       return undefined;
     }
-    const next = W.applyAction(g.loaded, g.state, parsed.action);
+    const next = W.callAction(g.loaded, g.state, parsed.action);
     if (!next.ok) { mialError(next); return undefined; }
     g.state = next.value;
-    pushHistory([{ type: 'decision', action: parsed.action, thought: parsed.thought }]);
-    addChat('jev', `→ ${parsed.action}${parsed.thought ? ` · ${parsed.thought}` : ''}`);
+    const conf = parsed.confidence === undefined ? undefined : Math.round(parsed.confidence * 100) / 100;
+    pushHistory([{ type: 'decision', action: parsed.action, ...(conf === undefined ? {} : { confidence: conf }) }]);
+    addChat('jev', `→ ${parsed.action}${conf === undefined ? '' : ` (${conf.toFixed(2)})`}`);
     emit('jev-decision', parsed);
     g.counters.jevSinceSonnet += 1;
     g.counters.jevDecisions += 1;

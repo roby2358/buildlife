@@ -8,7 +8,7 @@ The twist is that the world's rules aren't fixed. They're written in
 [MarkdownIsALisp](https://github.com/roby2358/yuwakisaweb/tree/main/markdown_is_a_lisp), a Lisp
 whose syntax is Markdown bullets, and the inhabitant's own minds can rewrite them while it runs.
 
-- **Jev** (`typesafe/jev-router` on OpenRouter) is the fast mind. It decides where to walk next.
+- **Jev** (`typesafe/jev-1.14`, TypeSafe's System One model, through OpenRouter) is the fast mind. It decides where to walk next, as a pure choice with probabilities and no words.
 - **Claude Haiku** is the slow mind. It reflects, chats with you, edits the world, and rewrites
   both minds' prompts.
 - **Wonder** refills only when the inhabitant makes or improves something. Chopping wood forever

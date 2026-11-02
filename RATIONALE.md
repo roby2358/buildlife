@@ -27,6 +27,21 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ## Minds
 
+### D-42 Jev's options are functions: `actions` lists definition names and the chosen one is called — *Decided*
+- **Intent:** your call: a choice should literally be a function, kept in a list of names the inhabitant can edit.
+- **Shape:** `actions(state)` returns names; each must be a definition taking the state and returning a state record. Jev's Choice options are those names, and the core calls the chosen definition. `apply-action` is gone. The default world has `go-bush`, `go-well`, `go-shack`, `go-tree` (each `go-to` its place) and `stay`.
+- **Checked before asking Jev:** a listed name that isn't a one-parameter definition makes the request a MIAL error naming `actions`, so the repair rule fixes the list instead of Jev picking something uncallable.
+- **Cost:** a new place no longer becomes an option by itself; the mind writes a function for it and lists it (the preamble says so). The gain is that options can be anything, not only walking somewhere.
+- **Alternatives:** every `act-*` definition is an option, found by the core (not chosen: you wanted an explicit list); fall back to `apply-action` for names that aren't definitions (rejected: a place named like a definition would call it).
+
+### D-41 Jev is TypeSafe's System One model, asked one Choice question per decision — *Decided*
+- **Intent:** your call: Jev makes choices and writes no text. `typesafe/jev-router`, used until now, turned out to be a router that uses Jev to pick another model per request. OpenRouter's log showed a Jev call answered by Grok 4.7 with reasoning, at about $0.004 a decision; about $1.25 on 2026-11-01. The "thought" text in Jev's chat lines came from those models.
+- **Shape:** `typesafe/jev-1.14` through OpenRouter's System One endpoint (`/api/v1/systemone`, same OpenRouter key, CORS open to the page). `jev-prompt` is the state, `jev-system` the instructions, and `actions` the Choice options (each described by its own name; the instructions explain them). The reply is the choice, a confidence and probabilities; the chat shows `→ well (0.82)` and the event history keeps the confidence, so the reflective mind sees how sure Jev was.
+- **Cost:** $0.042 per million prompt tokens and nothing for output (OpenRouter, 2026-11-02): a few hundredths of a cent per thousand decisions.
+- **Pinned version:** 1.14 rather than `~typesafe/jev-latest`, so behavior changes only when we change the constant.
+- **Alternatives:** TypeSafe's own API (rejected: its CORS refuses browser origins, so it needed a local relay); a fixed cheap text model on OpenRouter (rejected: still writes text, not Jev).
+- **D-28's retry** now covers a reply with no choice; JEV_MAX_TOKENS is gone (Jev has no output tokens to cap).
+
 ### D-39 The reflective mind keeps a conversation; the prompt is laid out for the cache — *Decided*
 - **Intent:** your call. It used to see only the last 20 chat lines, rebuilt each call, so it forgot anything older and nothing in the user part could be cached.
 - **Shape:** system blocks `[CORE_PREAMBLE][world source][reflective-mind-system]`, with breakpoints after the first two: the preamble never changes, and the source changes only on an edit (you said "periodically, but not often"). Then the conversation, the new user turn (third breakpoint), and the status from `reflective-mind-prompt` as a mid-conversation system message, last. Putting `reflective-mind-system` after the source rather than in the same block as it caches the same way for reflections, and lets repair calls share both breakpoints.
@@ -59,7 +74,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **The reply is structured output, not a tool.** It's a JSON object under `output_config.format` (`SONNET_SCHEMA`), so edits arrive as fields rather than prose to parse. *Alternatives:* a forced `act` tool, which Sonnet 5.5 rejected with a 400; an `auto` tool with a prompt instruction, which doesn't guarantee a call. A tool-based design is still worth revisiting if Sonnet ever needs to read definitions on demand (see D-23).
 - **No server-side fallback:** Haiku 5.5 doesn't offer one, so a refusal is a chat error naming its category, and the next reflection tries again.
 - The system text (reflective-mind-system + core preamble + world source) is one prompt-cached block. It changes only when the world is edited, so most reflections read it from the cache.
-- Jev is `typesafe/jev-router` on OpenRouter, the only Jev slug listed (checked 2026-10-31). It supports `response_format`/structured outputs, so the `actions` list becomes a JSON-schema enum.
+- Jev was first `typesafe/jev-router` on OpenRouter, taken for Jev itself (checked 2026-10-31). It's a router that forwards each request to another model; replaced by Jev itself in D-41.
 - **CORS from file://:** you already have many pages that call OpenRouter this way. Anthropic needs the `anthropic-dangerous-direct-browser-access: true` header, which is expected to work and is checked first during implementation.
 
 ### D-19 The chat carries your messages plus model thoughts and decisions — *Decided*
@@ -129,7 +144,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-11 Persistence and the edit list — *Decided*
 - Everything is saved in localStorage. A button downloads the current MIAL. The edit list shows commit-style comments with no diff and no in-UI editor.
 
-### D-25 `actions` takes the state — *Proposed*
+### D-25 `actions` takes the state — *Proposed* (since D-42 it lists function names, so new places no longer follow automatically)
 - **Alternatives:** a zero-argument constant list.
 - **Why:** G-1. When Sonnet adds a structure, Jev's choices follow from the state without a second edit. Zero-argument definitions also can't be called from MIAL code, so a constant list would be reachable only by the core.
 
@@ -140,7 +155,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 ### D-27 `?fake` runs the page with stand-in minds and in-memory storage — *Proposed*
 - **Why:** You can try the page without keys, and the browser test can walk every chat kind deterministically. In-memory storage means a fake session never overwrites a real save.
 
-### D-28 Retry a malformed or cut-off Jev reply once — *Decided*
+### D-28 Retry a malformed or cut-off Jev reply once — *Decided* (since D-41: a reply with no choice)
 - **Alternatives:** no retry (the original rule), which costs a decision; retry until valid, which loops on a persistent fault; raising JEV_MAX_TOKENS instead (the error now says when a reply was cut off at the limit, so that can be judged from evidence).
 - **JEV_MAX_TOKENS 400 → 1024 (2026-11-01):** a live Jev decision was cut off mid-JSON at 400 and needed the retry. The inhabitant asked for a little more; you chose 1024 for comfortable headroom. The retry stays as the backstop.
 - **Why:** The inhabitant asked for it after losing a decision. One retry recovers transient faults, and a second failure is reported, never looped. An unknown action isn't retried, because the schema enum makes it a model error, not noise.

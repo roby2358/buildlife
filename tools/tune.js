@@ -85,7 +85,7 @@ const one = (seedOffset) => {
     // jitter latency by ±1 tick so runs differ (deterministic per run)
     const lat = latencyTicks + ((t + seedOffset) % 3) - 1;
     if (pendingAt !== null && t >= pendingAt) {
-      s = W.applyAction(loaded, s, choose(M.toJS(s))).value;
+      s = W.callAction(loaded, s, `go-${choose(M.toJS(s))}`).value;
       pendingAt = null;
       decisions++;
     }

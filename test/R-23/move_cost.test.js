@@ -14,7 +14,7 @@ test('MOVE_COST covers food, water and rest only', () => {
 test('walking 5 tiles costs 5 × MOVE_COST beyond an idle twin', () => {
   // Well at (9,2); (9,3) is 5 tiles from (9,8). Run exactly until arrival, then compare with an idle twin.
   const start = w.withFields(w.fresh(), { inhabitant: { x: 9, y: 8 } });
-  let walker = w.W.applyAction(w.loaded, start, 'well').value;
+  let walker = w.W.callAction(w.loaded, start, 'go-well').value;
   let idle = start;
   for (let t = 0; t < 100 && w.js(walker).inhabitant.status !== 'using'; t++) {
     walker = w.tick(walker);
@@ -30,7 +30,7 @@ test('walking 5 tiles costs 5 × MOVE_COST beyond an idle twin', () => {
 
 test('move cost floors meters at 0', () => {
   let s = w.withFields(w.fresh(), { inhabitant: { x: 9, y: 8 }, meters: { food: 0.01, water: 0.01, rest: 0.01, wood: 50, wonder: 50 } });
-  s = w.W.applyAction(w.loaded, s, 'well').value;
+  s = w.W.callAction(w.loaded, s, 'go-well').value;
   for (let t = 0; t < 30; t++) s = w.tick(s);
   for (const m of ['food', 'water', 'rest']) assert.ok(meters(s)[m] >= 0, m);
 });

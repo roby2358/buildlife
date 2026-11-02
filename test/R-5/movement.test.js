@@ -9,7 +9,7 @@ const BASE = w.constant('BASE_SPEED');
 test('walks to the well and arrives once', () => {
   // Well at (9,2). From (9,8) the tile next to it, (9,3), is 5 steps away.
   let s = w.withFields(w.fresh(), { inhabitant: { x: 9, y: 8 } });
-  s = w.W.applyAction(w.loaded, s, 'well').value;
+  s = w.W.callAction(w.loaded, s, 'go-well').value;
   const expected = Math.ceil(5 / BASE);
   let arrivedAt = null;
   let arrivals = 0;
@@ -27,7 +27,7 @@ test('walks to the well and arrives once', () => {
 
 test('status becomes using on arrival', () => {
   let s = w.withFields(w.fresh(), { inhabitant: { x: 9, y: 4 } });
-  s = w.W.applyAction(w.loaded, s, 'well').value;
+  s = w.W.callAction(w.loaded, s, 'go-well').value;
   for (let t = 0; t < 10 && w.js(s).inhabitant.status !== 'using'; t++) s = w.tick(s);
   assert.strictEqual(w.js(s).inhabitant.status, 'using');
 });

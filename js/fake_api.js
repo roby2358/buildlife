@@ -12,7 +12,7 @@ BL.createFakeApi = () => {
 
   const lowestNeed = (prompt, actions) => {
     const meters = [...prompt.matchAll(/(\w+): (\d+)/g)].map(m => [m[1], Number(m[2])]);
-    const place = { food: 'bush', water: 'well', rest: 'shack', wood: 'tree' };
+    const place = { food: 'go-bush', water: 'go-well', rest: 'go-shack', wood: 'go-tree' };
     const lowest = meters.filter(([m]) => actions.includes(place[m])).sort((a, b) => a[1] - b[1])[0];
     return lowest ? place[lowest[0]] : actions[0];
   };
@@ -20,9 +20,10 @@ BL.createFakeApi = () => {
   return {
     canCall: () => true,
     jev: (body) => {
-      const actions = body.response_format.json_schema.schema.properties.action.enum;
-      const action = lowestNeed(body.messages[1].content, actions);
-      return delay('Jev', body, { choices: [{ message: { content: JSON.stringify({ thought: `(fake) my ${action} need is calling`, action }) } }] });
+      const actions = Object.keys(body.questions.action.criteria);
+      const action = lowestNeed(body.state, actions);
+      const probabilities = Object.fromEntries(actions.map(a => [a, a === action ? 0.8 : 0.2 / (actions.length - 1)]));
+      return delay('Jev', body, { answers: { action: { type: 'choice', choice: action, confidence: 0.7, probabilities } } });
     },
     sonnet: (body) => {
       if (body.compaction) {

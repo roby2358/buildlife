@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { makeGame } = require('../helpers/env');
 
-test('Jev request: MIAL system/user text and actions as the schema enum', () => {
+test('Jev request: one Choice question; jev-prompt is the state, jev-system the instructions, actions the options', () => {
   const { BL, game } = makeGame();
   const W = BL.world;
   const loaded = W.load(game.getSource());
@@ -11,9 +11,12 @@ test('Jev request: MIAL system/user text and actions as the schema enum', () => 
   const req = BL.minds.buildJev(loaded, state, []);
   assert.ok(req.ok);
   assert.strictEqual(req.body.model, BL.CONFIG.JEV_MODEL);
-  assert.strictEqual(req.body.messages[0].content, W.jevSystem(loaded).value);
-  assert.strictEqual(req.body.messages[1].content, W.jevPrompt(loaded, state, []).value);
-  assert.deepEqual(req.body.response_format.json_schema.schema.properties.action.enum, W.actions(loaded, state).value);
+  assert.strictEqual(req.body.state, W.jevPrompt(loaded, state, []).value);
+  const q = req.body.questions.action;
+  assert.strictEqual(q.type, 'choice');
+  assert.strictEqual(q.instructions, W.jevSystem(loaded).value);
+  assert.deepEqual([...Object.keys(q.criteria)], [...W.actions(loaded, state).value]);
+  assert.strictEqual(req.body.messages, undefined, 'no chat messages: Jev writes no text');
 });
 
 test('Sonnet request: core preamble, full source, then reflective-mind-system; JSON output schema', () => {

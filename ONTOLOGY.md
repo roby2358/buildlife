@@ -61,7 +61,7 @@ A Record is a Node tagged `record` whose children are field nodes. Each field no
 Lists are ordinary MIAL data lists (a node with `null` value and children). They're accessed with the host built-ins `get`, `put`, `has?`, and `keys` (see the host built-ins rule).
 
 ### 1.3 WorldState [P]: a Record, owned by the MIAL
-*Serves:* G-1, G-2. The world MIAL creates this record (`initial-state`) and transforms it (`tick`, `apply-action`). JS keeps it, saves it, and reads only the **render contract** fields. The MIAL may add fields freely.
+*Serves:* G-1, G-2. The world MIAL creates this record (`initial-state`) and transforms it (`tick` and the action functions `actions` names). JS keeps it, saves it, and reads only the **render contract** fields. The MIAL may add fields freely.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -211,10 +211,10 @@ These are the definitions JS calls. They're all ordinary definitions, and all of
 |---|---|---|---|
 | `initial-state` | — | WorldState | New game |
 | `tick` | state | WorldState (with this tick's `events`) | Every `TICK_MS` while running |
-| `actions` | state | non-empty list of strings | Building Jev's response schema, and validating Jev's choice |
-| `apply-action` | state, action | WorldState | A Jev decision arrives |
-| `jev-system` | — | string | Every Jev call |
-| `jev-prompt` | state, history | string | Every Jev call |
+| `actions` | state | non-empty list of function names | Building Jev's Choice options, and validating Jev's choice. Every name must be a definition taking the state, or the call is a MIAL error naming `actions` (D-42) |
+| *each name in `actions`* | state | WorldState | Jev chooses it: the core calls that definition (D-42) |
+| `jev-system` | — | string: the question's instructions | Every Jev call |
+| `jev-prompt` | state, history | string: the state Jev reads | Every Jev call |
 | `jev-trigger?` | state, events | boolean | After every tick |
 | `reflective-mind-system` | — | string | Every Sonnet call |
 | `reflective-mind-prompt` | state, history | string | Every Sonnet call |
@@ -289,11 +289,13 @@ Decay of the meter being refilled still applies, so the net refill rate is `rate
 ### 4.5 Action *(MIAL)* [P]
 *Serves:* G-2.
 ```
-actions(state) = names of state.structures + "idle"
-apply-action(state, a):
-  if a = idle: status = idle; goal = idle
-  else if a names a structure: goal = a; status = walking; progress = 0
+actions(state) = ["go-bush", "go-well", "go-shack", "go-tree", "stay"]   # function names (D-42)
+go-bush(state) = go-to(state, "bush")      # likewise go-well, go-shack, go-tree
+go-to(state, place):
+  if place names a structure: goal = place; status = walking; progress = 0
   else: state unchanged
+stay(state): status = idle; goal = idle
+# a new place gets an option only when a function for it is written and added to actions
 # walking re-checks adjacency on the next tick, so an adjacent goal becomes `using` + arrived then
 ```
 
@@ -343,14 +345,17 @@ every TICK_MS while running and not halted:
 *Serves:* G-2, G-4.
 ```
 acts = call actions(state)
-request: system = jev-system(), user = jev-prompt(state, history),
-         response_format = json_schema {thought: string, action: enum acts}
-on reply: if the JSON is malformed or cut off and this is the first attempt:
+request: POST OpenRouter /api/v1/systemone (D-41)
+         {model: JEV_MODEL, state: jev-prompt(state, history),
+          questions: {action: {type: choice, instructions: jev-system(), criteria: {a: a for a in acts}}}}
+reply:   answers.action = {choice, confidence, probabilities}; Jev writes no text
+on reply: if answers.action.choice is missing and this is the first attempt:
             jev-invalid += 1; jev-retries += 1; chat system; resend, built from the current state
             (no gap check; the in-flight slot covers both attempts)
-          if malformed again: jev-invalid += 1; chat error, no change; no third attempt
+          if missing again: jev-invalid += 1; chat error, no change; no third attempt
           if action ∉ call actions(state): chat error, no change (not retried)
-          else state = call apply-action(state, action); chat jev{thought, action}
+          else state = call the definition named choice (state); chat jev "→ choice (confidence)";
+               event history += {type: decision, action: choice, confidence}
           jevSinceSonnet += 1
           if call reflective-mind-trigger?(state, lastEvents, jevSinceSonnet): request Sonnet call
 on network/API error: chat error; the next trigger retries
@@ -463,7 +468,7 @@ factory reset also clears requests; new game keeps them
 ## §5 Agents
 
 ### 5.1 Jev [D]
-*Serves:* G-2. Model: `typesafe/jev-router` on OpenRouter (chat completions with JSON-schema structured output).
+*Serves:* G-2. Model: `typesafe/jev-1.14` (TypeSafe's System One model) through OpenRouter's `/api/v1/systemone` endpoint: one Choice question per decision, answered with a choice and probabilities, never text (D-41).
 - **Sees:** only what `jev-system` and `jev-prompt` choose to show. It never sees the chat directly. Sonnet controls what Jev knows and may pass information, including what you said, through those definitions [D].
 - **Can do:** choose one item from `actions`. Nothing else.
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
@@ -522,10 +527,9 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | COMPACT_MAX_TOKENS | 8000 | tokens | D-40 |
 | SAVE_EVERY_TICKS | 20 | ticks | D-11 |
 | SONNET_MAX_TOKENS | 16000 | tokens | D-7 |
-| JEV_MAX_TOKENS | 1024 | tokens | D-28 |
 | MAX_CHAT | 500 | chat entries kept | D-11 |
 | MAX_VERSIONS | 200 | snapshots kept (v1 always) | D-22 |
-| JEV_MODEL | `typesafe/jev-router` | | D-17 |
+| JEV_MODEL | `typesafe/jev-1.14` | | D-41 |
 | SONNET_MODEL | `claude-haiku-5-5` | | D-17 |
 | SONNET_NAME | `Haiku` | the reflective mind's name in the UI | D-17 |
 
@@ -562,7 +566,7 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 |---|---|---|
 | `ticked` | state, events | Canvas redraw |
 | `chat` | ChatEntry | Appended to the chat log. `low` and `recovered` world events become `system` entries [P] |
-| `jev-decision` | thought, action | Chat (`jev`) |
+| `jev-decision` | action, confidence, probabilities | Chat (`jev`) |
 | `reflective-mind-reply` | thought, say | Chat (`reflective-mind-thought`, `inhabitant`) |
 | `edit-applied` | Edit | Chat (`edit`) and the edit list |
 | `run-applied` | comment | Chat (`run`), canvas redraw |

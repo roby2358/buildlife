@@ -28,10 +28,9 @@ The core calls these definitions (keep their names and parameters, or the world 
 |---|---|---|
 | initial-state | none | a record (used only when this game started; to change the running world, use run) |
 | tick | state | the next state record; its "events" field holds this tick's events |
-| actions | state | a list of strings: the choices Jev may pick |
-| apply-action | state, action | a state record |
-| jev-system | none | Jev's system prompt (string) |
-| jev-prompt | state, history | Jev's prompt (string) |
+| actions | state | a list of function names: Jev's options. Each must be a definition taking the state and returning a state record; the one Jev chooses is called. To give Jev a new option, write such a function and add its name here |
+| jev-system | none | the question Jev answers, as instructions (string) |
+| jev-prompt | state, history | the state Jev reads before choosing (string) |
 | jev-trigger? | state, events | true to ask Jev now |
 | reflective-mind-system | none | your own system prompt (string) |
 | reflective-mind-prompt | state, history | your own prompt (string) |
@@ -95,10 +94,13 @@ Your only job is to make it load and tick again with as little change as possibl
 
   const fail = (r) => ({ ok: false, error: r.error, definition: r.definition });
 
-  // Jev call rule: system and user text come from MIAL; the schema enum is `actions`.
+  // Jev call rule (D-41): one System One Choice question. jev-prompt is the state Jev reads,
+  // jev-system the question it answers, and `actions` the options. Jev returns no text.
   const buildJev = (loaded, state, history) => {
     const acts = W.actions(loaded, state);
     if (!acts.ok) return fail(acts);
+    const missing = W.uncallableActions(loaded, acts.value);
+    if (missing.length) return { ok: false, definition: 'actions', error: `actions lists ${missing.map(n => `"${n}"`).join(', ')}, which ${missing.length === 1 ? "isn't a definition" : "aren't definitions"} taking the state` };
     const system = W.jevSystem(loaded);
     if (!system.ok) return fail(system);
     const prompt = W.jevPrompt(loaded, state, history);
@@ -108,26 +110,23 @@ Your only job is to make it load and tick again with as little change as possibl
       actions: acts.value,
       body: {
         model: C.JEV_MODEL,
-        max_tokens: C.JEV_MAX_TOKENS,
-        messages: [
-          { role: 'system', content: system.value },
-          { role: 'user', content: prompt.value },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: {
-            name: 'jev_decision',
-            strict: true,
-            schema: {
-              type: 'object',
-              properties: { thought: { type: 'string' }, action: { type: 'string', enum: acts.value } },
-              required: ['thought', 'action'],
-              additionalProperties: false,
-            },
-          },
+        state: prompt.value,
+        questions: {
+          action: { type: 'choice', instructions: system.value, criteria: Object.fromEntries(acts.value.map(a => [a, a])) },
         },
       },
     };
+  };
+
+  const parseJev = (resp, actions) => {
+    const answer = resp && resp.answers && resp.answers.action;
+    if (!answer || typeof answer.choice !== 'string') {
+      // retryable: a malformed reply is worth one more try; a wrong action is not.
+      return { ok: false, retryable: true, error: `Jev's reply had no choice: ${JSON.stringify(resp).slice(0, 200)}` };
+    }
+    if (!actions.includes(answer.choice)) return { ok: false, error: `Jev chose "${answer.choice}", which is not one of: ${actions.join(', ')}` };
+    const confidence = typeof answer.confidence === 'number' ? answer.confidence : undefined;
+    return { ok: true, action: answer.choice, confidence, probabilities: answer.probabilities || {} };
   };
 
   // Models sometimes wrap JSON in a code fence even under a schema; accept that.
@@ -136,18 +135,6 @@ Your only job is to make it load and tick again with as little change as possibl
     try { return JSON.parse(t); } catch { return undefined; }
   };
 
-  const parseJev = (resp, actions) => {
-    const choice = resp && resp.choices && resp.choices[0];
-    const content = choice && choice.message && choice.message.content;
-    const data = parseJSON(content);
-    if (!data || typeof data.action !== 'string') {
-      const cutOff = choice && choice.finish_reason === 'length' ? ' (cut off at JEV_MAX_TOKENS)' : '';
-      // retryable: a malformed or truncated reply is worth one more try; a wrong action is not.
-      return { ok: false, retryable: true, error: `Jev's reply was not a valid JSON decision${cutOff}: ${String(content).slice(0, 200)}` };
-    }
-    if (!actions.includes(data.action)) return { ok: false, error: `Jev chose "${data.action}", which is not one of: ${actions.join(', ')}` };
-    return { ok: true, action: data.action, thought: typeof data.thought === 'string' ? data.thought : '' };
-  };
 
   // Reasoning comes back as summarized thinking blocks. Asking for it in the reply text
   // gets requests declined as reasoning_extraction (D-31).

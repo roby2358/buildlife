@@ -47,7 +47,16 @@ BL.world = (() => {
     initialState: (l) => call(l, 'initial-state', [], 'record'),
     tick: (l, state) => call(l, 'tick', [state], 'record'),
     actions: (l, state) => call(l, 'actions', [state], 'strings'),
-    applyAction: (l, state, action) => call(l, 'apply-action', [state, str(action)], 'record'),
+    // Action rule (D-42): an action is the name of a one-parameter definition; choosing it calls it.
+    callAction: (l, state, name) => {
+      const proc = l.env.vars[name];
+      if (!proc || !proc._isLambda || proc.params.length !== 1) {
+        return { ok: false, definition: 'actions', error: `actions lists "${name}", which isn't a definition taking the state` };
+      }
+      return call(l, name, [state], 'record');
+    },
+    // The listed names that aren't one-parameter definitions (empty when every action is callable).
+    uncallableActions: (l, names) => names.filter(n => { const p = l.env.vars[n]; return !p || !p._isLambda || p.params.length !== 1; }),
     jevSystem: (l) => call(l, 'jev-system', [], 'string'),
     jevPrompt: (l, state, history) => call(l, 'jev-prompt', [state, M.fromJS(history)], 'string'),
     jevTrigger: (l, state, events) => call(l, 'jev-trigger?', [state, events], 'truthy'),

@@ -37,7 +37,7 @@ test('decisions, invalid replies and retries are counted', async () => {
   assert.strictEqual(api.calls[0].provider, 'jev');
   api.calls[0].resolve({ choices: [{ message: { content: 'nope' } }] });
   await flush();
-  api.calls[1].resolve(jevReply('well'));
+  api.calls[1].resolve(jevReply('go-well'));
   await flush();
   game.tickOnce();
   const c = core(BL, game);

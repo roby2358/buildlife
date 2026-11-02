@@ -32,7 +32,7 @@ const makeApi = ({ keys = true } = {}) => {
 
 const flush = () => new Promise(r => setImmediate(r));
 
-const jevReply = (action, thought = 'test') => ({ choices: [{ message: { content: JSON.stringify({ thought, action }) } }] });
+const jevReply = (action, confidence = 0.9) => ({ answers: { action: { type: 'choice', choice: action, confidence, probabilities: { [action]: confidence } } } });
 const sonnetReply = (obj) => ({
   stop_reason: 'end_turn',
   content: [{ type: 'text', text: JSON.stringify({ summary: '', say: '', edits: [], run: [], core_request: '', ...obj }) }],

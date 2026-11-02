@@ -1,4 +1,4 @@
-// Network calls to OpenRouter (Jev) and Anthropic (Sonnet), straight from the browser.
+// Network calls to OpenRouter (Jev, through its System One endpoint) and Anthropic (Sonnet), straight from the browser.
 // Plain fetch: this page runs from file:// with no bundler, so the SDKs aren't an option.
 var BL = window.BL = window.BL || {};
 
@@ -43,7 +43,7 @@ BL.createApi = (getKeys) => {
   return {
     canCall: (provider) => !!(provider === 'jev' ? getKeys().openrouter : getKeys().anthropic),
 
-    jev: (body) => post('Jev', 'https://openrouter.ai/api/v1/chat/completions', {
+    jev: (body) => post('Jev', 'https://openrouter.ai/api/v1/systemone', {
       'Authorization': `Bearer ${getKeys().openrouter.trim()}`,
       'Content-Type': 'application/json',
       'X-Title': 'BuildLife',
