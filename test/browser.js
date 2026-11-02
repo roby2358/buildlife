@@ -135,8 +135,14 @@ const check = (id, ok, detail) => {
 
   await page.click('#settingsBtn');
   await page.waitForTimeout(100);
+  const models = await page.$$eval('#reflectiveModel option', os => os.map(o => o.textContent));
   await page.screenshot({ path: path.join(SHOTS, 'settings.png') });
-  await page.keyboard.press('Escape');
+  await page.selectOption('#reflectiveModel', 'claude-sonnet-5-5');
+  await page.click('#settingsSave');
+  await page.waitForTimeout(100);
+  const counters = await page.locator('#counters').textContent();
+  check('U-10', models.length === 3 && models.every(m => /per reflection/.test(m)) && /Sonnet \d+/.test(counters) &&
+    await page.evaluate(() => BL.app.game.getSettings().reflectiveModel === 'claude-sonnet-5-5'), `models: ${models.map(m => m.split(' ')[0]).join(', ')}; counters "${counters}"`);
 
   check('console', errors.length === 0, errors.length ? errors.join(' | ') : 'no console errors during the walk');
   await browser.close();

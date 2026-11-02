@@ -73,7 +73,14 @@ body {
 }
 
 .counters {
-  margin-left: auto;
+  /* Takes the leftover space and truncates, so "thinking: …" coming and going never wraps the
+     toolbar (a wrap shrank the canvas for a moment). */
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
   color: var(--muted);
   font: 12px var(--mono);
 }
@@ -256,7 +263,7 @@ body {
 
 .chat-form input { flex: 1; min-width: 0; }
 
-.chat-form input, .dialog input {
+.chat-form input, .dialog input, .dialog select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

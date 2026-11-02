@@ -1,10 +1,10 @@
 // Chat log and edit list rendering (U-4, U-5).
 var BL = window.BL = window.BL || {};
 
-BL.createChatView = ({ log, editList, editCount, onRevert }) => {
+BL.createChatView = ({ log, editList, editCount, onRevert, modelName = () => 'reflective mind' }) => {
   const LABELS = {
     // jev: chat entries saved before the auto-mind rename
-    user: 'you', inhabitant: 'inhabitant', 'auto-mind': 'Jev', jev: 'Jev', 'reflective-mind-thought': BL.CONFIG.SONNET_NAME,
+    user: 'you', inhabitant: 'inhabitant', 'auto-mind': 'Jev', jev: 'Jev',
     edit: 'world edit', run: 'run once', memory: 'memory', 'core-request': 'core change request', error: 'error', system: 'system',
   };
 
@@ -20,7 +20,7 @@ BL.createChatView = ({ log, editList, editCount, onRevert }) => {
   const appendMessage = (entry) => {
     const stick = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
     const msg = el('div', `msg msg-${entry.kind}`);
-    msg.append(el('span', 'msg-meta', `${LABELS[entry.kind] || entry.kind} · ${time(entry.at)} · tick ${entry.tick}`));
+    msg.append(el('span', 'msg-meta', `${entry.kind === 'reflective-mind-thought' ? modelName() : LABELS[entry.kind] || entry.kind} · ${time(entry.at)} · tick ${entry.tick}`));
     msg.append(document.createTextNode(entry.text));
     log.append(msg);
     if (stick) log.scrollTop = log.scrollHeight;

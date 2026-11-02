@@ -18,7 +18,14 @@ BL.CONFIG = {
   JEV_MODEL: '~typesafe/jev-latest', // System One alias for the newest Jev: a choice and probabilities, never text (D-41)
   // "Sonnet" is the role name of the reflective mind (reflective-mind-system, reflective-mind-prompt, ...);
   // the model filling the role, and the name the UI shows, are these two (D-17).
-  SONNET_MODEL: 'claude-haiku-5-5',
-  SONNET_NAME: 'Haiku',
+  // The reflective mind's model, chosen in Settings (D-43). Each runs with the least thinking it
+  // allows: Haiku off, Sonnet 5.5 between_tools (it rejects "disabled"; with no tools that's none),
+  // Opus 5.5 can't turn thinking off, so low effort. Opus opts into server-side refusal fallback.
+  REFLECTIVE_MODELS: {
+    'claude-haiku-5-5': { name: 'Haiku', thinking: { type: 'disabled' }, perReflection: '≈ $0.001' },
+    'claude-sonnet-5-5': { name: 'Sonnet', thinking: { type: 'between_tools' }, perReflection: '≈ $0.015' },
+    'claude-opus-5-5': { name: 'Opus', thinking: { type: 'adaptive', display: 'summarized' }, effort: 'low', fallbacks: 'default', perReflection: '≈ $0.04' },
+  },
+  SONNET_MODEL: 'claude-haiku-5-5', // the default choice
   SONNET_MAX_TOKENS: 16000,
 };

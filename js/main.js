@@ -24,6 +24,7 @@
     log: $('chatLog'),
     editList: $('editList'),
     editCount: $('editCount'),
+    modelName: () => game.getModelName(),
     onRevert: (v) => {
       if (confirm(`Revert the world MIAL to v${v}? This adds a new version; nothing is lost.`)) game.revertTo(v);
     },
@@ -39,8 +40,8 @@
     $('stepBtn').disabled = running || halted;
     $('haltBadge').hidden = !halted;
     const c = game.getCounters();
-    const busy = [c.inFlight.jev && 'Jev', (c.inFlight.sonnet || c.inFlight.repair) && C.SONNET_NAME].filter(Boolean);
-    $('counters').textContent = `v${game.getVersion()} · Jev ${c.jevCalls} · ${C.SONNET_NAME} ${c.sonnetCalls}${busy.length ? ` · thinking: ${busy.join(', ')}` : ''}${fake ? ' · FAKE MINDS' : ''}`;
+    const busy = [c.inFlight.jev && 'Jev', (c.inFlight.sonnet || c.inFlight.repair) && game.getModelName()].filter(Boolean);
+    $('counters').textContent = `v${game.getVersion()} · Jev ${c.jevCalls} · ${game.getModelName()} ${c.sonnetCalls}${busy.length ? ` · thinking: ${busy.join(', ')}` : ''}${fake ? ' · FAKE MINDS' : ''}`;
     $('worldStatus').textContent = halted ? 'Halted' : game.isRepairing() ? 'Repairing…' : running ? 'Running' : 'Paused';
   };
 
@@ -116,11 +117,16 @@
   game.on((type, payload) => {
     if (type === 'chat') chat.appendMessage(payload);
     if (type === 'edit-applied') renderEdits();
+    if (type === 'auto-mind-decision') renderer.ping();
     if (type === 'requests-changed') renderRequests();
     if (type === 'ticked' || type === 'auto-mind-decision' || type === 'edit-applied' || type === 'run-applied') latest = game.getRenderData();
     if (type === 'ticked' && $('statsDialog').open) renderStats();
     updateControls();
   });
+
+  // The model choices come from the core config (D-43).
+  $('reflectiveModel').replaceChildren(...Object.entries(C.REFLECTIVE_MODELS).map(([id, m]) =>
+    Object.assign(document.createElement('option'), { value: id, textContent: `${m.name} (${id}) · ${m.perReflection} per reflection` })));
 
   game.boot();
   const savedSettings = store.loadSettings();
@@ -201,6 +207,7 @@
     $('openrouterKey').value = keys.openrouter;
     $('jevGap').value = s.jevGapMs / 1000;
     $('sonnetGap').value = s.sonnetGapMs / 1000;
+    $('reflectiveModel').value = s.reflectiveModel;
     $('logApi').checked = BL.logApi;
     $('settingsDialog').showModal();
   });
@@ -208,7 +215,7 @@
     if ($('settingsDialog').returnValue !== 'save') return;
     keys = { anthropic: $('anthropicKey').value.trim(), openrouter: $('openrouterKey').value.trim() };
     store.saveKeys(keys);
-    const settings = { jevGapMs: Number($('jevGap').value) * 1000, sonnetGapMs: Number($('sonnetGap').value) * 1000 };
+    const settings = { jevGapMs: Number($('jevGap').value) * 1000, sonnetGapMs: Number($('sonnetGap').value) * 1000, reflectiveModel: $('reflectiveModel').value };
     BL.logApi = $('logApi').checked;
     if (game.setSettings(settings).ok) store.saveSettings({ ...settings, logApi: BL.logApi });
     updateControls();

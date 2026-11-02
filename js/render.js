@@ -6,6 +6,8 @@ var BL = window.BL = window.BL || {};
 BL.createRenderer = (canvas) => {
   const ctx = canvas.getContext('2d');
   const shown = { x: null, y: null }; // the inhabitant's drawn position, eased toward its tile
+  const PING_MS = 900;
+  let pingAt = -Infinity; // when Jev last decided; a ring spreads from the inhabitant
 
   const COLORS = {
     ground: '#6aa84f', grid: '#5f9a46', label: '#16260f',
@@ -100,6 +102,15 @@ BL.createRenderer = (canvas) => {
     if (inh) {
       const x = center(shown.x);
       const y = center(shown.y);
+      // Decision ping: the only visible sign of a decision that leaves the inhabitant where it is.
+      const age = (performance.now() - pingAt) / PING_MS;
+      if (age >= 0 && age < 1) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 * (1 - age)})`;
+        ctx.lineWidth = Math.max(1, tile * 0.06);
+        ctx.beginPath();
+        ctx.arc(x, y, tile * (0.45 + 0.75 * age), 0, Math.PI * 2);
+        ctx.stroke();
+      }
       const ch = firstGrapheme((data.emoji || {}).inhabitant);
       if (ch) emoji(ch, x, y, tile * 0.45);
       else {
@@ -110,5 +121,5 @@ BL.createRenderer = (canvas) => {
     }
   };
 
-  return { draw };
+  return { draw, ping: () => { pingAt = performance.now(); } };
 };

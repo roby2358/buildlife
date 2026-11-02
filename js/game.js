@@ -34,9 +34,11 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     repairing: false,
     userWaiting: false,
     inFlight: { jev: false, sonnet: false, repair: false, compact: false },
-    settings: { jevGapMs: C.JEV_MIN_GAP_MS, sonnetGapMs: C.SONNET_MIN_GAP_MS },
+    settings: { jevGapMs: C.JEV_MIN_GAP_MS, sonnetGapMs: C.SONNET_MIN_GAP_MS, reflectiveModel: C.SONNET_MODEL },
     warnedMissingKey: {},
   };
+
+  const modelName = () => minds.modelSpec(g.settings.reflectiveModel).name;
 
   const tickNow = () => {
     const f = g.state && M.field(g.state, 'tick');
@@ -112,7 +114,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   };
 
   const startRepair = (r) => {
-    addChat('system', `Asking ${C.SONNET_NAME} to repair the world (attempt ${g.counters.repairStreak} of ${C.REPAIR_MAX}).`);
+    addChat('system', `Asking ${modelName()} to repair the world (attempt ${g.counters.repairStreak} of ${C.REPAIR_MAX}).`);
     emit('repair-started', { streak: g.counters.repairStreak });
     if (!api.canCall('sonnet')) {
       g.repairing = false;
@@ -122,7 +124,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       save();
       return;
     }
-    const req = minds.buildRepair({ source: g.source, version: g.version, error: r.error, definition: r.definition });
+    const req = minds.buildRepair({ source: g.source, version: g.version, error: r.error, definition: r.definition, model: g.settings.reflectiveModel });
     g.inFlight.repair = true;
     g.counters.sonnetCalls += 1;
     api.sonnet(req.body)
@@ -137,7 +139,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
 
   const apiError = (provider, err) => {
     const message = String(err && err.message ? err.message : err);
-    addChat('error', `${provider === 'jev' ? 'Jev' : C.SONNET_NAME} call failed: ${message}`);
+    addChat('error', `${provider === 'jev' ? 'Jev' : modelName()} call failed: ${message}`);
     emit('api-error', { provider, message });
   };
 
@@ -223,7 +225,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     const req = minds.buildSonnet({
       loaded: g.loaded, state: g.state, history: g.eventHistory,
       source: g.source, version: g.version, userWaiting: g.userWaiting,
-      conversation: g.conversation, entries: g.chat.filter(e => e.seq > g.lastSeenSeq),
+      conversation: g.conversation, entries: g.chat.filter(e => e.seq > g.lastSeenSeq), model: g.settings.reflectiveModel,
     });
     if (!req.ok) { mialError(req); return false; }
     const sent = { turn: req.turn, seqAtSend, epoch: g.convEpoch };
@@ -241,7 +243,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   };
 
   const handleSonnetReply = (resp, author, sent) => {
-    const parsed = minds.parseSonnet(resp);
+    const parsed = minds.parseSonnet(resp, modelName());
     if (!parsed.ok) { addChat('error', parsed.error); return; } // the turn isn't stored; its entries go in the next one
     if (sent && sent.epoch === g.convEpoch) {
       g.conversation.turns.push({ role: 'user', content: sent.turn }, { role: 'assistant', content: parsed.text });
@@ -282,7 +284,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
   const maybeCompact = () => {
     if (g.inFlight.compact || conversationChars() <= C.COMPACT_AT_CHARS || !api.canCall('sonnet')) return false;
     const cut = compactionCut();
-    const req = minds.buildCompaction({ loaded: g.loaded, source: g.source, version: g.version, conversation: g.conversation, cut });
+    const req = minds.buildCompaction({ loaded: g.loaded, source: g.source, version: g.version, conversation: g.conversation, cut, model: g.settings.reflectiveModel });
     if (!req.ok) { addChat('error', `Compaction skipped: ${req.error}`); return false; }
     const epoch = g.convEpoch;
     g.inFlight.compact = true;
@@ -484,7 +486,10 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
       if (!(v >= 0)) return { ok: false, reason: `${k} must be a number ≥ 0` };
       gaps[k] = v;
     }
-    Object.assign(g.settings, gaps);
+    if (s.reflectiveModel !== undefined && !C.REFLECTIVE_MODELS[s.reflectiveModel]) {
+      return { ok: false, reason: `unknown model ${s.reflectiveModel}` };
+    }
+    Object.assign(g.settings, gaps, s.reflectiveModel !== undefined ? { reflectiveModel: s.reflectiveModel } : {});
     g.warnedMissingKey = {};
     return { ok: true, events: [] };
   };
@@ -529,6 +534,7 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     getConversation: () => g.conversation,
     getCounters: () => ({ ...g.counters, inFlight: { ...g.inFlight } }),
     getSettings: () => ({ ...g.settings }),
+    getModelName: modelName,
     getEventHistory: () => g.eventHistory,
     getStatsData: () => W.statsData(g.state),
     getRenderData: () => ({ ...W.renderData(g.state, g.loaded ? W.lowThreshold(g.loaded) : undefined), slowingMeters: g.loaded ? W.slowingMeters(g.loaded) : undefined, emoji: g.loaded ? W.emojiMap(g.loaded) : {} }),

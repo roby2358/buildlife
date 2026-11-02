@@ -2,6 +2,13 @@
 
 Newest first.
 
+### 2026-11-02: Choose the reflective mind's model; least thinking for each
+New Settings menu: Haiku 5.5 (default), Sonnet 5.5 or Opus 5.5 (your call; D-43, R-30, U-10). Each runs with the least thinking it allows: Haiku `disabled`, Sonnet `between_tools`, Opus adaptive at `effort: low`, which also sends server-side refusal fallback. So Haiku no longer thinks either. Repair and compaction follow the choice. `REFLECTIVE_MODELS` in config replaces `SONNET_NAME`; labels in the toolbar, chat and messages follow the chosen model. The pjpd model-switch task is done in this form (no separate thinking switch).
+
+### 2026-11-02: No toolbar wrap; a ping on each Jev decision
+- At window widths of about 1070–1200 px (for example with DevTools open), "· thinking: Jev" in the counters wrapped the toolbar onto a second line, which shrank the canvas until the call returned. The counters now take the leftover space and truncate instead of wrapping.
+- Each Jev decision draws a ring that spreads from the inhabitant and fades over 0.9 s (`renderer.ping()` on `auto-mind-decision`). It's the only visible sign of a decision that leaves the inhabitant in place, such as `stay`. It's drawn for every decision because the core can't know which actions mean staying.
+
 ### 2026-11-02: Jev's MIAL names become auto-mind-
 Like the reflective mind's rename, the names the world and its minds see now say the role, the autonomous mind, not the model (your call; replaces the pjpd "actor-" task). `jev-system`, `jev-prompt`, `jev-trigger?`, `jev-notes` and `wakes-jev?` became `auto-mind-system`, `auto-mind-prompt`, `auto-mind-trigger?`, `auto-mind-notes` and `wakes-auto-mind?`; core stats `jev-decisions/invalid/retries` became `auto-mind-decisions/invalid/retries`; the chat kind `jev` became `auto-mind` (still labelled Jev) and the event `jev-decision` became `auto-mind-decision`. JS internals (`buildJev`, `jevCalls`, `jevGapMs`, the `jev` provider) and the model slug keep "jev". Saved worlds still using `jev-*` definitions break at the next tick and go to repair; rename them or factory reset.
 

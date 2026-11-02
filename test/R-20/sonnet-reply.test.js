@@ -30,11 +30,11 @@ test('summary and summarized thinking are shown together', async () => {
   assert.strictEqual(game.getChat().at(-1).text, 'Hi!');
 });
 
-test('requests ask for summarized thinking and never for reasoning in the reply text', () => {
+test('requests never ask for reasoning in the reply text; the default model runs with thinking off', () => {
   const { BL, game } = makeGame();
   const loaded = BL.world.load(game.getSource());
   const req = BL.minds.buildSonnet({ loaded, state: game.getState(), history: [], source: game.getSource(), version: 1 });
-  assert.deepEqual(req.body.thinking, { type: 'adaptive', display: 'summarized' });
+  assert.deepEqual({ ...req.body.thinking }, { type: 'disabled' }, 'Haiku: the least thinking it allows (D-43)');
   assert.deepEqual(Object.keys(req.body.output_config.format.schema.properties), ['summary', 'say', 'edits', 'run', 'core_request']);
   assert.doesNotMatch(BL.minds.CORE_PREAMBLE, /private reflection|your thinking/i);
 });

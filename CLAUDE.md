@@ -39,8 +39,8 @@ R-n, U-n, X-n), never section numbers.
 - Two minds: Jev (`~typesafe/jev-latest` via OpenRouter's `/api/v1/systemone`: one Choice question, `actions` as the options, no text) picks actions; the reflective mind replies with
   `{summary, say, edits, run, core_request}` via structured output. Its calls form one stored conversation (system
   blocks preamble → source → role prompt, then turns, then the status as a trailing system message), condensed by
-  Anthropic's on-demand compaction past COMPACT_AT_CHARS; thinking is never replayed. Jev's MIAL names are `auto-mind-*`. The reflective mind's MIAL names are `reflective-mind-*`; JS still calls it "Sonnet" but it runs
-  `BL.CONFIG.SONNET_MODEL` (currently Claude Haiku); `SONNET_NAME` is the UI label. Request building and parsing,
+  Anthropic's on-demand compaction past COMPACT_AT_CHARS; thinking is never replayed. Jev's MIAL names are `auto-mind-*`. The reflective mind's MIAL names are `reflective-mind-*`; JS still calls it "Sonnet" but its model
+  is a Settings choice from `BL.CONFIG.REFLECTIVE_MODELS` (Haiku by default), each with the least thinking it allows. Request building and parsing,
   plus the uneditable `CORE_PREAMBLE`, are in `minds.js`; network calls in `api.js`.
 - Edits replace/append/delete whole `# definitions` with no validation; every stored version is reprinted in compact
   form (`compactSource`) and snapshotted for revert. A reply's `run` instead calls its first definition once on the live

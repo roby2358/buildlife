@@ -49,11 +49,12 @@ BL.createApi = (getKeys) => {
       'X-Title': 'BuildLife',
     }, body),
 
-    sonnet: (body) => post(BL.CONFIG.SONNET_NAME, 'https://api.anthropic.com/v1/messages', {
+    sonnet: (body) => post(`Reflective mind (${body.model})`, 'https://api.anthropic.com/v1/messages', {
       'x-api-key': getKeys().anthropic.trim(),
       'anthropic-version': '2026-10-21',
       'anthropic-dangerous-direct-browser-access': 'true',
-      'anthropic-beta': 'compact-2026-09-04', // on-demand compaction and the summary block it returns (D-40)
+      // on-demand compaction and its summary block (D-40); server-side refusal fallback when a model opts in (D-43)
+      'anthropic-beta': ['compact-2026-09-04', ...(body.fallbacks ? ['server-side-fallback-2026-07-01'] : [])].join(','),
       'content-type': 'application/json',
     }, body),
   };

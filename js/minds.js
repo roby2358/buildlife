@@ -139,13 +139,27 @@ Your only job is to make it load and tick again with as little change as possibl
 
   // Reasoning comes back as summarized thinking blocks. Asking for it in the reply text
   // gets requests declined as reasoning_extraction (D-31).
-  const sonnetBody = (system) => ({
-    model: C.SONNET_MODEL,
-    max_tokens: C.SONNET_MAX_TOKENS,
-    thinking: { type: 'adaptive', display: 'summarized' },
-    system,
-    output_config: { format: { type: 'json_schema', schema: SONNET_SCHEMA } },
-  });
+  // The model spec for an id from REFLECTIVE_MODELS (the default for an unknown id).
+  const modelSpec = (id) => {
+    const key = C.REFLECTIVE_MODELS[id] ? id : C.SONNET_MODEL;
+    return { id: key, ...C.REFLECTIVE_MODELS[key] };
+  };
+  // Model, thinking and effort for a request (D-43). withFormat adds the structured reply.
+  const modelFields = (id, withFormat) => {
+    const m = modelSpec(id);
+    const output = { ...(m.effort ? { effort: m.effort } : {}), ...(withFormat ? { format: { type: 'json_schema', schema: SONNET_SCHEMA } } : {}) };
+    return { model: m.id, thinking: m.thinking, ...(Object.keys(output).length ? { output_config: output } : {}) };
+  };
+
+  const sonnetBody = (system, model) => {
+    const m = modelSpec(model);
+    return {
+      ...modelFields(model, true),
+      max_tokens: C.SONNET_MAX_TOKENS,
+      system,
+      ...(m.fallbacks ? { fallbacks: m.fallbacks } : {}),
+    };
+  };
 
   const sourceSection = (source, version) => `## Current world source (version ${version})\n\n${source}`;
 
@@ -171,7 +185,7 @@ Your only job is to make it load and tick again with as little change as possibl
 
   // Sonnet call rule: three system blocks, the conversation, the new user turn (cached), and the
   // world status as a system message that is shown once and not stored.
-  const buildSonnet = ({ loaded, state, history, source, version, userWaiting, conversation, entries }) => {
+  const buildSonnet = ({ loaded, state, history, source, version, userWaiting, conversation, entries, model }) => {
     const system = W.sonnetSystem(loaded);
     if (!system.ok) return fail(system);
     const prompt = W.sonnetPrompt(loaded, state, history);
@@ -182,7 +196,7 @@ Your only job is to make it load and tick again with as little change as possibl
       ok: true,
       turn,
       body: {
-        ...sonnetBody(systemBlocks(source, version, system.value)),
+        ...sonnetBody(systemBlocks(source, version, system.value), model),
         messages: [
           ...historyMessages(conversation),
           { role: 'user', content: [cached(turn)] },
@@ -194,15 +208,14 @@ Your only job is to make it load and tick again with as little change as possibl
 
   // Compaction rule (D-40): summarize the oldest `cut` turns (and any earlier summary) with the
   // same system blocks as the conversation, so the summarizer reads the same world and hits the cache.
-  const buildCompaction = ({ loaded, source, version, conversation, cut }) => {
+  const buildCompaction = ({ loaded, source, version, conversation, cut, model }) => {
     const system = W.sonnetSystem(loaded);
     if (!system.ok) return fail(system);
     const instr = W.compactionInstructions(loaded);
     if (instr && !instr.ok) return fail(instr);
     const body = {
-      model: C.SONNET_MODEL,
+      ...modelFields(model, false), // no structured output on a compaction request
       max_tokens: C.COMPACT_MAX_TOKENS,
-      thinking: { type: 'adaptive', display: 'summarized' },
       system: systemBlocks(source, version, system.value),
       messages: historyMessages({ block: conversation.block, turns: conversation.turns.slice(0, cut) }),
       compaction: { type: 'summarize', ...(instr && instr.value.trim() ? { instructions: instr.value } : {}) },
@@ -219,24 +232,24 @@ Your only job is to make it load and tick again with as little change as possibl
   };
 
   // Repair rule: fixed prompt instead of reflective-mind-system (which may be what broke).
-  const buildRepair = ({ source, version, error, definition }) => ({
+  const buildRepair = ({ source, version, error, definition, model }) => ({
     ok: true,
     body: {
-      ...sonnetBody(systemBlocks(source, version, CORE_REPAIR_PROMPT)),
+      ...sonnetBody(systemBlocks(source, version, CORE_REPAIR_PROMPT), model),
       messages: [{ role: 'user', content: `The world failed${definition ? ` in "# ${definition}"` : ''} with this error:\n${error}\n\nFix it.` }],
     },
   });
 
-  const parseSonnet = (resp) => {
-    if (!resp || !Array.isArray(resp.content)) return { ok: false, error: `${C.SONNET_NAME} returned no content` };
+  const parseSonnet = (resp, name = modelSpec().name) => {
+    if (!resp || !Array.isArray(resp.content)) return { ok: false, error: `${name} returned no content` };
     if (resp.stop_reason === 'refusal') {
       const d = resp.stop_details || {};
-      return { ok: false, error: `${C.SONNET_NAME} declined this request (refusal${d.category ? `: ${d.category}` : ''})${d.explanation ? `. ${d.explanation}` : ''}` };
+      return { ok: false, error: `${name} declined this request (refusal${d.category ? `: ${d.category}` : ''})${d.explanation ? `. ${d.explanation}` : ''}` };
     }
-    if (resp.stop_reason === 'max_tokens') return { ok: false, error: `${C.SONNET_NAME} ran out of tokens before finishing its reply` };
+    if (resp.stop_reason === 'max_tokens') return { ok: false, error: `${name} ran out of tokens before finishing its reply` };
     const text = resp.content.filter(b => b.type === 'text').map(b => b.text).join('');
     const data = parseJSON(text);
-    if (!data || typeof data !== 'object') return { ok: false, error: `${C.SONNET_NAME}'s reply was not valid JSON: ${text.slice(0, 200)}` };
+    if (!data || typeof data !== 'object') return { ok: false, error: `${name}'s reply was not valid JSON: ${text.slice(0, 200)}` };
     const edits = Array.isArray(data.edits) ? data.edits.filter(e => e && typeof e === 'object').map(e => ({
       comment: String(e.comment || '').trim() || '(no comment)',
       source: String(e.source || ''),
@@ -259,5 +272,5 @@ Your only job is to make it load and tick again with as little change as possibl
     };
   };
 
-  return { CORE_PREAMBLE, CORE_REPAIR_PROMPT, SONNET_SCHEMA, buildJev, parseJev, turnText, buildSonnet, buildCompaction, parseCompaction, buildRepair, parseSonnet };
+  return { CORE_PREAMBLE, CORE_REPAIR_PROMPT, SONNET_SCHEMA, modelSpec, buildJev, parseJev, turnText, buildSonnet, buildCompaction, parseCompaction, buildRepair, parseSonnet };
 })();

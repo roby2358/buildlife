@@ -27,6 +27,14 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ## Minds
 
+### D-43 The reflective mind's model is a Settings choice, each with the least thinking it allows — *Decided*
+- **Intent:** your call: try Sonnet and Opus without code changes, and keep cost down by thinking as little as each model allows.
+- **Thinking per model:** Haiku 5.5 `{type: disabled}` (allowed at its default effort). Sonnet 5.5 rejects `disabled`; `{type: between_tools}` thinks only between tool calls, and we use no tools, so it doesn't think. Opus 5.5 can't disable thinking at any effort, so adaptive at `effort: low`, with summarized display so its brief thinking still shows. The same setting goes on repair and compaction requests.
+- **Refusal fallback:** Opus sends `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`), as recommended for Opus 5.5. Sonnet doesn't: its `between_tools` setting is specific to Sonnet 5.5 and a fallback model might reject it, so a Sonnet refusal stays a chat error. Haiku has no fallback.
+- **Rough cost per reflection** (shown in the menu): Haiku ≈ $0.001, Sonnet ≈ $0.015, Opus ≈ $0.04, from list prices and our usual request size; not measured.
+- **Effect:** with thinking off, the chat shows only the reply's `summary`. Writing working MIAL is the hard part, so expect more slips and repairs than with thinking on; that is what the comparison is for.
+- **Stored** with the other settings, never in the save. Switching models starts a fresh prompt cache; the conversation carries over (it holds no thinking blocks).
+
 ### D-42 Jev's options are functions: `actions` lists definition names and the chosen one is called — *Decided*
 - **Intent:** your call: a choice should literally be a function, kept in a list of names the inhabitant can edit.
 - **Shape:** `actions(state)` returns names; each must be a definition taking the state and returning a state record. Jev's Choice options are those names, and the core calls the chosen definition. `apply-action` is gone. The default world has `go-bush`, `go-well`, `go-shack`, `go-tree` (each `go-to` its place) and `stay`.
@@ -70,9 +78,9 @@ Why each current choice was made. Decisions describe the present state. Their hi
 - **Why:** G-2. This matches what Jev is built for (typed, cheap judgments) and gives Sonnet the long-horizon work. Because Sonnet can rewrite Jev's prompt, Sonnet teaches and Jev executes, and the relationship can change over time.
 
 ### D-17 Models and transport — *Decided (models) / Proposed (transport)*
-- **The reflective mind runs on Claude Haiku 5.5** (`claude-haiku-5-5`), chosen by you as better sized for this job: a small world, short structured replies. It costs a twentieth of Sonnet 5.5's per-token price ($0.10/$0.50 against $2/$10 per million tokens). "Sonnet" stays the role name in the MIAL entry points and code, because existing worlds depend on those names; the UI shows `SONNET_NAME`. It's called with plain `fetch` from the browser (`anthropic-dangerous-direct-browser-access: true`, API version `2026-10-21`). The SDK isn't an option on a file:// page with no bundler.
+- **The reflective mind runs on Claude Haiku 5.5** (`claude-haiku-5-5`) by default (Sonnet and Opus are Settings choices since D-43), chosen by you as better sized for this job: a small world, short structured replies. It costs a twentieth of Sonnet 5.5's per-token price ($0.10/$0.50 against $2/$10 per million tokens). "Sonnet" stays the role name in the MIAL entry points and code, because existing worlds depend on those names; the UI shows `SONNET_NAME`. It's called with plain `fetch` from the browser (`anthropic-dangerous-direct-browser-access: true`, API version `2026-10-21`). The SDK isn't an option on a file:// page with no bundler.
 - **The reply is structured output, not a tool.** It's a JSON object under `output_config.format` (`SONNET_SCHEMA`), so edits arrive as fields rather than prose to parse. *Alternatives:* a forced `act` tool, which Sonnet 5.5 rejected with a 400; an `auto` tool with a prompt instruction, which doesn't guarantee a call. A tool-based design is still worth revisiting if Sonnet ever needs to read definitions on demand (see D-23).
-- **No server-side fallback:** Haiku 5.5 doesn't offer one, so a refusal is a chat error naming its category, and the next reflection tries again.
+- **No server-side fallback** on Haiku 5.5 (it doesn't offer one) or Sonnet (D-43), so a refusal is a chat error naming its category, and the next reflection tries again. Opus uses one.
 - The system text (reflective-mind-system + core preamble + world source) is one prompt-cached block. It changes only when the world is edited, so most reflections read it from the cache.
 - Jev was first `typesafe/jev-router` on OpenRouter, taken for Jev itself (checked 2026-10-31). It's a router that forwards each request to another model; replaced by Jev itself in D-41.
 - **CORS from file://:** you already have many pages that call OpenRouter this way. Anthropic needs the `anthropic-dangerous-direct-browser-access: true` header, which is expected to work and is checked first during implementation.

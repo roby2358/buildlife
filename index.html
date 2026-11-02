@@ -82,7 +82,7 @@ SOFTWARE.
   <dialog id="settingsDialog" class="dialog">
     <form method="dialog" id="settingsForm">
       <h2>Settings</h2>
-      <label>Anthropic API key (Haiku)
+      <label>Anthropic API key (reflective mind)
         <input id="anthropicKey" type="password" autocomplete="off" placeholder="sk-ant-…">
       </label>
       <label>OpenRouter API key (Jev)
@@ -92,10 +92,13 @@ SOFTWARE.
         <label>Min gap between Jev calls (s)
           <input id="jevGap" type="number" min="0" step="0.5">
         </label>
-        <label>Min gap between Haiku calls (s)
+        <label>Min gap between reflective mind calls (s)
           <input id="sonnetGap" type="number" min="0" step="1">
         </label>
       </div>
+      <label>Reflective mind model (least thinking each allows)
+        <select id="reflectiveModel"></select>
+      </label>
       <label class="check">
         <input id="logApi" type="checkbox">
         Log API requests and responses to the browser console

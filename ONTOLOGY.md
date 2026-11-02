@@ -381,7 +381,8 @@ messages = [assistant: conversation.block]                    if any
 turn     = chat entries with seq > lastSeenSeq, kinds user (as "neighbour"), edit, run, error, system;
            the last CHAT_HISTORY_N of them, one "[kind] text" line each;
            none: "(Nothing new in the chat. The world prompted this reflection.)"
-thinking = {adaptive, display: summarized}
+thinking, effort, fallbacks = the chosen model's least-thinking setting (D-43): Haiku {disabled};
+           Sonnet {between_tools}; Opus {adaptive, summarized} + effort low + fallbacks default
 output_config.format = json_schema {summary, say, edits[{comment, source, delete}], run[{comment, source}], core_request}
 on send:  jevSinceSonnet = 0; the waiting-user flag clears
 on reply: unless the conversation was cleared since sending:
@@ -475,7 +476,7 @@ factory reset also clears requests; new game keeps them
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
 
 ### 5.2 Sonnet [D]
-*Serves:* G-1, G-2, G-6. "Sonnet" is the code name of the reflective mind (JS and these docs); the MIAL names it `reflective-mind-*` (`reflective-mind-system`, `reflective-mind-prompt`, `reflective-mind-trigger?`, core stats `reflective-mind-calls/edits/runs`). The model filling the role is `SONNET_MODEL` (Claude Haiku 5.5), shown in the UI as `SONNET_NAME`, and it's called directly from the browser.
+*Serves:* G-1, G-2, G-6. "Sonnet" is the code name of the reflective mind (JS and these docs); the MIAL names it `reflective-mind-*` (`reflective-mind-system`, `reflective-mind-prompt`, `reflective-mind-trigger?`, core stats `reflective-mind-calls/edits/runs`). The model filling the role is chosen in Settings from `REFLECTIVE_MODELS` (Haiku 5.5 by default, Sonnet 5.5 or Opus 5.5), each with the least thinking it allows; the UI shows its name, and it's called directly from the browser (D-43).
 - **Sees:** `reflective-mind-system`, `reflective-mind-prompt` (as the per-call status), the core preamble, the full WorldSource, and its conversation: a summary of older turns, then its recent turns word for word.
 - **Can do:** speak as the inhabitant, edit any definition (including the prompts and cadence of both models), run one-time functions on the live state, and request core changes.
 - **Can't do:** edit core JS, the core preamble, or the repair prompt. Can't change the core call-gap floors.
@@ -531,8 +532,8 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | MAX_CHAT | 500 | chat entries kept | D-11 |
 | MAX_VERSIONS | 200 | snapshots kept (v1 always) | D-22 |
 | JEV_MODEL | `~typesafe/jev-latest` | | D-41 |
-| SONNET_MODEL | `claude-haiku-5-5` | | D-17 |
-| SONNET_NAME | `Haiku` | the reflective mind's name in the UI | D-17 |
+| REFLECTIVE_MODELS | Haiku 5.5 (thinking disabled), Sonnet 5.5 (between_tools), Opus 5.5 (effort low, refusal fallback) | the Settings choices | D-43 |
+| SONNET_MODEL | `claude-haiku-5-5` | the default choice | D-43 |
 
 ---
 
@@ -554,12 +555,12 @@ Every command checks that it's legal. An illegal command returns `{ok:false, rea
 | `deleteRequest(index)` | Index names a request | Removes that core request from the list (D-38) |
 | `newGame()` | Always | Recreates state from the current source |
 | `factoryReset()` | You confirm | Restores the default world |
-| `setSettings({jevGapMs, sonnetGapMs})` | Gaps ≥ 0 | Sets the call-gap floors. The UI stores them, and the API keys, through the store (never in the save) |
+| `setSettings({jevGapMs, sonnetGapMs, reflectiveModel})` | Gaps ≥ 0; model is a key of REFLECTIVE_MODELS | Sets the call-gap floors and the reflective mind's model, all or nothing. The UI stores them, and the API keys, through the store (never in the save) |
 
 Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it saves `world-v<version>.md`. Upload MIAL reads a chosen file and calls `uploadSource`.
 
 ### Read-only queries
-`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getRequests()`, `getConversation()`, `getCounters()` (with in-flight flags), `getSettings()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
+`getState()`, `getSource()`, `getVersion()`, `getEditLog()`, `getVersions()`, `getChat()`, `getRequests()`, `getConversation()`, `getCounters()` (with in-flight flags), `getSettings()`, `getModelName()`, `getEventHistory()`, `getRenderData()`, `getStatsData()` (the `core` record, plus every top-level record of plain numbers in the state except `grid` and `meters`), `isHalted()`, `isRunning()`, `isRepairing()`. `getRenderData()` reads the render contract through the same Record field lookup the MIAL's `get` uses.
 
 ### Events (core → UI)
 

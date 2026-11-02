@@ -28,7 +28,7 @@ BL.createFakeApi = () => {
     sonnet: (body) => {
       if (body.compaction) {
         const n = body.messages.filter(m => m.role === 'assistant').length;
-        return delay(`${BL.CONFIG.SONNET_NAME} compaction`, body, { stop_reason: 'compaction', content: [{ type: 'compaction', content: `(fake) A summary of ${n} earlier replies.`, signature: 'fake' }] });
+        return delay(`${body.model} compaction`, body, { stop_reason: 'compaction', content: [{ type: 'compaction', content: `(fake) A summary of ${n} earlier replies.`, signature: 'fake' }] });
       }
       sonnetCalls += 1;
       const reply = {
@@ -38,7 +38,7 @@ BL.createFakeApi = () => {
         run: sonnetCalls === 3 ? [{ comment: 'plant a flower patch', source: '# plant\n- state\n- put state `"structures"`\n  - append\n    - get state `"structures"`\n    - list\n      - record `"name"` `"flowers"` `"x"` `6` `"y"` `4` `"meter"` `"wonder"` `"rate"` `0.5` `"emoji"` `"🌷"`\n' }] : [],
         core_request: sonnetCalls === 2 ? '(fake) Could the canvas show a little sun that moves with the ticks?' : '',
       };
-      return delay(BL.CONFIG.SONNET_NAME, body, { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
+      return delay(body.model, body, { stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify(reply) }] });
     },
   };
 };
