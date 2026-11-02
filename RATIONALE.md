@@ -36,7 +36,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ### D-41 Jev is TypeSafe's System One model, asked one Choice question per decision — *Decided*
 - **Intent:** your call: Jev makes choices and writes no text. `typesafe/jev-router`, used until now, turned out to be a router that uses Jev to pick another model per request. OpenRouter's log showed a Jev call answered by Grok 4.7 with reasoning, at about $0.004 a decision; about $1.25 on 2026-11-01. The "thought" text in Jev's chat lines came from those models.
-- **Shape:** `~typesafe/jev-latest` (Jev 1.14 on 2026-11-02) through OpenRouter's System One endpoint (`/api/v1/systemone`, same OpenRouter key, CORS open to the page). `jev-prompt` is the state, `jev-system` the instructions, and `actions` the Choice options (each described by its own name; the instructions explain them). The reply is the choice, a confidence and probabilities; the chat shows the three likeliest options, highest first (`→ go-well 0.83 · go-bush 0.10 · go-tree 0.05`) and the event history keeps the confidence, so the reflective mind sees how sure Jev was.
+- **Shape:** `~typesafe/jev-latest` (Jev 1.14 on 2026-11-02) through OpenRouter's System One endpoint (`/api/v1/systemone`, same OpenRouter key, CORS open to the page). `auto-mind-prompt` is the state, `auto-mind-system` the instructions, and `actions` the Choice options (each described by its own name; the instructions explain them). The reply is the choice, a confidence and probabilities; the chat shows the three likeliest options, highest first (`→ go-well 0.83 · go-bush 0.10 · go-tree 0.05`) and the event history keeps the confidence, so the reflective mind sees how sure Jev was.
 - **Cost:** $0.042 per million prompt tokens and nothing for output (OpenRouter, 2026-11-02): a few hundredths of a cent per thousand decisions.
 - **Latest, not pinned (your call, 2026-11-02):** `~typesafe/jev-latest` follows each new Jev release, so behavior can change without a code change. Pinning a version such as `typesafe/jev-1.14` is the way back if a release behaves differently.
 - **Alternatives:** TypeSafe's own API (rejected: its CORS refuses browser origins, so it needed a local relay); a fixed cheap text model on OpenRouter (rejected: still writes text, not Jev).
@@ -86,7 +86,7 @@ Why each current choice was made. Decisions describe the present state. Their hi
 
 ### D-20 Jev doesn't see the chat directly; Sonnet may pass anything through — *Decided*
 - **Alternatives:** include recent chat in every Jev call.
-- **Why:** Sonnet is the inhabitant's voice, and it decides what Jev needs to know (including what you said) by editing `jev-prompt` or a definition it references. It also keeps Jev's calls small.
+- **Why:** Sonnet is the inhabitant's voice, and it decides what Jev needs to know (including what you said) by editing `auto-mind-prompt` or a definition it references. It also keeps Jev's calls small.
 
 ### D-21 Sonnet's only long-term memory is MIAL definitions it writes — *Proposed*
 - **Alternatives:** a core-managed memory field.

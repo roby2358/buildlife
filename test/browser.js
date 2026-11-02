@@ -45,7 +45,7 @@ const check = (id, ok, detail) => {
   await page.waitForSelector('.msg-inhabitant', { timeout: 15000 }).catch(() => {});
   await page.fill('#chatInput', 'Anything you would like changed in the core?');
   await page.click('#chatForm button');
-  const kinds = ['user', 'inhabitant', 'jev', 'reflective-mind-thought', 'edit', 'core-request'];
+  const kinds = ['user', 'inhabitant', 'auto-mind', 'reflective-mind-thought', 'edit', 'core-request'];
   await page.waitForFunction((ks) => ks.every(k => document.querySelector(`.msg-${k}`)), kinds, { timeout: 60000 }).catch(() => {});
   const present = await page.evaluate((ks) => ks.filter(k => document.querySelector(`.msg-${k}`)), kinds);
   const styles = await page.evaluate((ks) => ks.map(k => {
@@ -106,7 +106,7 @@ const check = (id, ok, detail) => {
   await page.waitForTimeout(100);
   const statsTables = await page.locator('#statsBody table').count();
   const statsText = await page.locator('#statsBody').textContent();
-  check('U-8', statsTables >= 2 && /jev-decisions/.test(statsText) && /low-ticks/.test(statsText), `stats dialog shows ${statsTables} tables (core and world)`);
+  check('U-8', statsTables >= 2 && /auto-mind-decisions/.test(statsText) && /low-ticks/.test(statsText), `stats dialog shows ${statsTables} tables (core and world)`);
   await page.screenshot({ path: path.join(SHOTS, 'stats.png') });
   await page.keyboard.press('Escape');
 

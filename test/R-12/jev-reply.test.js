@@ -50,7 +50,7 @@ test('a valid retry is applied', async () => {
   jevCalls(api)[1].resolve(jevReply('go-tree'));
   await flush();
   assert.strictEqual(BL.mial.toJS(game.getState()).inhabitant.goal, 'tree');
-  assert.strictEqual(game.getChat().at(-1).kind, 'jev');
+  assert.strictEqual(game.getChat().at(-1).kind, 'auto-mind');
 });
 
 test('an unknown action is not retried', async () => {
@@ -65,7 +65,7 @@ test('a valid action is applied and logged', async () => {
   askJev(game, api).resolve(jevReply('go-well', 0.823, { 'go-bush': 0.1, stay: 0.02, 'go-well': 0.83, 'go-tree': 0.05 }));
   await flush();
   assert.strictEqual(BL.mial.toJS(game.getState()).inhabitant.goal, 'well');
-  assert.strictEqual(game.getChat().at(-1).kind, 'jev');
+  assert.strictEqual(game.getChat().at(-1).kind, 'auto-mind');
   assert.strictEqual(game.getChat().at(-1).text, '→ go-well 0.83 · go-bush 0.10 · go-tree 0.05', 'top 3, highest first');
   const decision = game.getEventHistory().at(-1);
   assert.strictEqual(decision.confidence, 0.82);

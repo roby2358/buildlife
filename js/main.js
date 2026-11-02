@@ -117,7 +117,7 @@
     if (type === 'chat') chat.appendMessage(payload);
     if (type === 'edit-applied') renderEdits();
     if (type === 'requests-changed') renderRequests();
-    if (type === 'ticked' || type === 'jev-decision' || type === 'edit-applied' || type === 'run-applied') latest = game.getRenderData();
+    if (type === 'ticked' || type === 'auto-mind-decision' || type === 'edit-applied' || type === 'run-applied') latest = game.getRenderData();
     if (type === 'ticked' && $('statsDialog').open) renderStats();
     updateControls();
   });

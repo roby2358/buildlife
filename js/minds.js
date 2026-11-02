@@ -30,15 +30,15 @@ The core calls these definitions (keep their names and parameters, or the world 
 | initial-state | none | a record (used only when this game started; to change the running world, use run) |
 | tick | state | the next state record; its "events" field holds this tick's events |
 | actions | state | a list of function names: Jev's options. Each must be a definition taking the state and returning a state record; the one Jev chooses is called. To give Jev a new option, write such a function and add its name here |
-| jev-system | none | the question Jev answers, as instructions (string) |
-| jev-prompt | state, history | the state Jev reads before choosing (string) |
-| jev-trigger? | state, events | true to ask Jev now |
+| auto-mind-system | none | the question your autonomous mind (Jev) answers, as instructions (string) |
+| auto-mind-prompt | state, history | the state Jev reads before choosing (string) |
+| auto-mind-trigger? | state, events | true to ask Jev now |
 | reflective-mind-system | none | your own system prompt (string) |
 | reflective-mind-prompt | state, history | your own prompt (string) |
 | reflective-mind-trigger? | state, events, since | true to ask you now (since = Jev decisions since your last reflection) |
 | reflective-mind-compaction | none | optional: instructions for condensing your oldest conversation turns into a summary (string, at most 16384 characters) |
 
-The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, jev-decisions, jev-invalid, jev-retries, reflective-mind-calls, repairs, reflective-mind-edits, reflective-mind-runs, world-version). Anything you write there is overwritten.
+The canvas draws state fields grid (w, h), structures (each with name, x, y), inhabitant (x, y, goal), and every number in meters. Everything else in the state is yours to invent, except the "core" field: before every tick the core writes a read-only "core" record of facts only it knows (ticks, auto-mind-decisions, auto-mind-invalid, auto-mind-retries, reflective-mind-calls, repairs, reflective-mind-edits, reflective-mind-runs, world-version). Anything you write there is overwritten.
 Keep statistics about the world itself in your own MIAL, for example a record counting the ticks each need spends below the low threshold, so they follow your rules if you change them.
 The core ticks every ${C.TICK_MS} ms. It never asks Jev more often than every few seconds or you more often than every few seconds, whatever your triggers say.
 
@@ -95,8 +95,8 @@ Your only job is to make it load and tick again with as little change as possibl
 
   const fail = (r) => ({ ok: false, error: r.error, definition: r.definition });
 
-  // Jev call rule (D-41): one System One Choice question. jev-prompt is the state Jev reads,
-  // jev-system the question it answers, and `actions` the options. Jev returns no text.
+  // Jev call rule (D-41): one System One Choice question. auto-mind-prompt is the state Jev reads,
+  // auto-mind-system the question it answers, and `actions` the options. Jev returns no text.
   const buildJev = (loaded, state, history) => {
     const acts = W.actions(loaded, state);
     if (!acts.ok) return fail(acts);

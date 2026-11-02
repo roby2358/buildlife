@@ -57,9 +57,9 @@ BL.world = (() => {
     },
     // The listed names that aren't one-parameter definitions (empty when every action is callable).
     uncallableActions: (l, names) => names.filter(n => { const p = l.env.vars[n]; return !p || !p._isLambda || p.params.length !== 1; }),
-    jevSystem: (l) => call(l, 'jev-system', [], 'string'),
-    jevPrompt: (l, state, history) => call(l, 'jev-prompt', [state, M.fromJS(history)], 'string'),
-    jevTrigger: (l, state, events) => call(l, 'jev-trigger?', [state, events], 'truthy'),
+    jevSystem: (l) => call(l, 'auto-mind-system', [], 'string'),
+    jevPrompt: (l, state, history) => call(l, 'auto-mind-prompt', [state, M.fromJS(history)], 'string'),
+    jevTrigger: (l, state, events) => call(l, 'auto-mind-trigger?', [state, events], 'truthy'),
     sonnetSystem: (l) => call(l, 'reflective-mind-system', [], 'string'),
     sonnetPrompt: (l, state, history) => call(l, 'reflective-mind-prompt', [state, M.fromJS(history)], 'string'),
     sonnetTrigger: (l, state, events, since) => call(l, 'reflective-mind-trigger?', [state, events, M.node(since)], 'truthy'),

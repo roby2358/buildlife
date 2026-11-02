@@ -1,4 +1,4 @@
-// R-8: default jev-trigger? and reflective-mind-trigger?.
+// R-8: default auto-mind-trigger? and reflective-mind-trigger?.
 const test = require('node:test');
 const assert = require('node:assert');
 const { defaultWorld } = require('../helpers/world');
@@ -9,13 +9,13 @@ const RECHECK = w.constant('IDLE_RECHECK_TICKS');
 const walking = (tick) => w.withFields(w.M.fromJS({ ...w.js(w.fresh()), tick }), { inhabitant: { status: 'walking', goal: 'well' } });
 const jev = (state, events) => w.W.jevTrigger(w.loaded, state, w.M.fromJS(events)).value;
 
-test('jev-trigger? fires on full, low, recovered and idle events', () => {
+test('auto-mind-trigger? fires on full, low, recovered and idle events', () => {
   for (const type of ['full', 'low', 'recovered', 'idle']) assert.strictEqual(jev(walking(5), [{ type }]), true, type);
   assert.strictEqual(jev(walking(5), [{ type: 'arrived' }]), false);
   assert.strictEqual(jev(walking(5), []), false);
 });
 
-test('jev-trigger? fires while idle every IDLE_RECHECK_TICKS', () => {
+test('auto-mind-trigger? fires while idle every IDLE_RECHECK_TICKS', () => {
   const idle = (tick) => w.M.fromJS({ ...w.js(w.fresh()), tick });
   assert.strictEqual(jev(idle(1), []), true);
   assert.strictEqual(jev(idle(2), []), false);

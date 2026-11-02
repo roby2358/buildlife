@@ -3,7 +3,8 @@ var BL = window.BL = window.BL || {};
 
 BL.createChatView = ({ log, editList, editCount, onRevert }) => {
   const LABELS = {
-    user: 'you', inhabitant: 'inhabitant', jev: 'Jev', 'reflective-mind-thought': BL.CONFIG.SONNET_NAME,
+    // jev: chat entries saved before the auto-mind rename
+    user: 'you', inhabitant: 'inhabitant', 'auto-mind': 'Jev', jev: 'Jev', 'reflective-mind-thought': BL.CONFIG.SONNET_NAME,
     edit: 'world edit', run: 'run once', memory: 'memory', 'core-request': 'core change request', error: 'error', system: 'system',
   };
 

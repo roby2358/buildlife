@@ -240,7 +240,7 @@ body {
 
 .msg-user { align-self: flex-end; max-width: 85%; border-left: none; border-right: 3px solid var(--accent); background: var(--user-bg); }
 .msg-inhabitant { border-left-color: var(--sonnet); background: var(--inhabitant-bg); font-size: 15px; }
-.msg-jev { border-left-color: var(--jev); color: var(--jev-text); font-size: 13px; }
+.msg-auto-mind, .msg-jev { border-left-color: var(--jev); color: var(--jev-text); font-size: 13px; }
 .msg-reflective-mind-thought { border-left-color: var(--sonnet); color: var(--muted); font-style: italic; }
 .msg-edit, .msg-run { border-left-color: var(--ok); font: 12px var(--mono); }
 .msg-core-request { border: 1px solid var(--warn); border-left-width: 3px; background: var(--core-request-bg); }

@@ -4,7 +4,7 @@ const assert = require('node:assert');
 const { makeGame, flush, jevReply, sonnetReply } = require('../helpers/env');
 
 // Make Jev's trigger always true so gating is the only thing limiting calls.
-const eager = (game) => game.applyEdit({ comment: 'always ask', source: '# jev-trigger?\n- *\n  - state\n  - events\n- `true`\n' });
+const eager = (game) => game.applyEdit({ comment: 'always ask', source: '# auto-mind-trigger?\n- *\n  - state\n  - events\n- `true`\n' });
 const callsTo = (api, provider) => api.calls.filter(c => c.provider === provider).length;
 const jevCalls = (api) => callsTo(api, 'jev');
 const sonnetCalls = (api) => callsTo(api, 'sonnet');

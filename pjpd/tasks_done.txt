@@ -1,0 +1,7 @@
+Priority:   95
+Status: Done
+ID: actor-rename-nun8
+Created: 2026-11-01T23:15:37Z
+Updated: 2026-11-02T02:54:31Z
+
+BuildLife: rename the fast mind's MIAL names from jev-* to another role name, matching the sonnet-* → reflective-mind-* rename. Done 2026-11-02 as auto-mind-* (autonomous mind) instead of actor-*: auto-mind-system/prompt/trigger?/notes, core stats auto-mind-decisions/invalid/retries, chat kind auto-mind (labelled Jev), event auto-mind-decision. JS internals and the model slug keep "jev".

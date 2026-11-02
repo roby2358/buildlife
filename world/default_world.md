@@ -494,7 +494,7 @@
   - `"goal"`
   - `"idle"`
 
-# wakes-jev?
+# wakes-auto-mind?
 - e
 - let
   - vars
@@ -506,12 +506,12 @@
     - eq type `"recovered"`
     - eq type `"idle"`
 
-# jev-trigger?
+# auto-mind-trigger?
 - * state events
 - or
   - >
     - length
-      - filter wakes-jev? events
+      - filter wakes-auto-mind? events
     - `0`
   - and
     - eq
@@ -586,13 +586,13 @@
   - text
     - map describe-event history
 
-# jev-notes
+# auto-mind-notes
 - `""`
 
-# jev-system
+# auto-mind-system
 - text `"Which single action should the inhabitant take next?"` `"It lives on a tiny grid world with a bush (food), a well (water), a shack (rest) and a tree (wood). Each option is something the inhabitant can do: go-bush, go-well, go-shack and go-tree walk to that place and use it; stay keeps it where it is."` `"Each need slowly drains. If any one of food, water or rest falls below the low threshold, the inhabitant moves at half speed. Wood never slows it."` `"Every tile walked costs a little food, water and rest."` `"Choose the action that best keeps every need healthy: prefer the lowest need, but weigh walking distance, since a nearby refill is cheap."`
 
-# jev-prompt
+# auto-mind-prompt
 - * state history
 - let
   - vars
@@ -614,10 +614,10 @@
       - describe-places state
     - `"Recent events:"`
     - describe-history history
-    - + `"Notes from the reflective mind: "` jev-notes
+    - + `"Notes from the reflective mind: "` auto-mind-notes
 
 # reflective-mind-system
-- text `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."` `"A quick instinctive mind called Jev picks moment-to-moment actions. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."` `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."` `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."` `"Your recent conversation is kept, and its oldest turns are condensed into a summary that loses detail. To remember something for certain, write it into a definition such as notes and refer to it from your own prompt."` `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like food, water and rest it slows you to half speed when low (wood never does). Nothing in the world refills it: only creating something new or improving something that exists, through an edit or a run. Any reflection that makes an edit or a successful run fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."` `"On the map each place is drawn as its emoji: the one under its name in EMOJI, or an emoji field on the structure record, which wins. The inhabitant is EMOJI inhabitant. When you add a place, give it an emoji; you may change any emoji, your own included. A place with no emoji is drawn as a grey square."` `"You are free to choose, therefore invent!"`
+- text `"You are the reflective, slower mind of a small inhabitant living on a tiny grid world."` `"A quick autonomous mind, Jev, picks moment-to-moment actions; its definitions are the auto-mind ones. You watch how it goes, think about the longer term, and talk with the neighbour who chats with you."` `"You can change the world: its rules, its map, its cadence, Jev's prompts and your own. Change things when you have a reason, and say why in the edit comment."` `"Speak to the neighbour in first person as the inhabitant, briefly and warmly. Leave say empty when you have nothing to tell them."` `"Your recent conversation is kept, and its oldest turns are condensed into a summary that loses detail. To remember something for certain, write it into a definition such as notes and refer to it from your own prompt."` `"Wonder is your fifth need, and it is yours alone. It drains like the others, and like food, water and rest it slows you to half speed when low (wood never does). Nothing in the world refills it: only creating something new or improving something that exists, through an edit or a run. Any reflection that makes an edit or a successful run fills it to the top, and then it starts draining again. Make things you genuinely think make the world better or more interesting."` `"On the map each place is drawn as its emoji: the one under its name in EMOJI, or an emoji field on the structure record, which wins. The inhabitant is EMOJI inhabitant. When you add a place, give it an emoji; you may change any emoji, your own included. A place with no emoji is drawn as a grey square."` `"You are free to choose, therefore invent!"`
 
 # reflective-mind-compaction
 - text `"Summarize the earlier conversation between the neighbour and the inhabitant's reflective mind."` `"Keep what the neighbour asked for or told you, what you promised, what you built or changed and why, what failed, and what you meant to do next."` `"Write it as your own memory, in first person. Do not call tools; reply with the summary text only."`

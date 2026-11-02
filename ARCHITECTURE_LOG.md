@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-02: Jev's MIAL names become auto-mind-
+Like the reflective mind's rename, the names the world and its minds see now say the role, the autonomous mind, not the model (your call; replaces the pjpd "actor-" task). `jev-system`, `jev-prompt`, `jev-trigger?`, `jev-notes` and `wakes-jev?` became `auto-mind-system`, `auto-mind-prompt`, `auto-mind-trigger?`, `auto-mind-notes` and `wakes-auto-mind?`; core stats `jev-decisions/invalid/retries` became `auto-mind-decisions/invalid/retries`; the chat kind `jev` became `auto-mind` (still labelled Jev) and the event `jev-decision` became `auto-mind-decision`. JS internals (`buildJev`, `jevCalls`, `jevGapMs`, the `jev` provider) and the model slug keep "jev". Saved worlds still using `jev-*` definitions break at the next tick and go to repair; rename them or factory reset.
+
 ### 2026-11-02: The preamble shows how to quote a string
 The reflective mind twice wrote `"type"` / `"structures"` without backticks in one session (a `wakes-jev?` edit, then a run), and MIAL read them as undefined symbols. CORE_PREAMBLE now follows "Backticks make literals" with a right/wrong example, and notes that keys inside `- mial` data stay bare.
 

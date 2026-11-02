@@ -12,7 +12,7 @@ test('state.core is present after a tick and counts ticks', () => {
   const c = core(BL, game);
   assert.strictEqual(c.ticks, 2);
   assert.strictEqual(c['world-version'], game.getVersion());
-  for (const k of ['jev-decisions', 'jev-invalid', 'jev-retries', 'reflective-mind-calls', 'repairs', 'reflective-mind-edits']) assert.strictEqual(typeof c[k], 'number', k);
+  for (const k of ['auto-mind-decisions', 'auto-mind-invalid', 'auto-mind-retries', 'reflective-mind-calls', 'repairs', 'reflective-mind-edits']) assert.strictEqual(typeof c[k], 'number', k);
 });
 
 test('world code can read state.core during the tick, and its writes are overwritten', () => {
@@ -41,5 +41,5 @@ test('decisions, invalid replies and retries are counted', async () => {
   await flush();
   game.tickOnce();
   const c = core(BL, game);
-  assert.deepEqual([c['jev-decisions'], c['jev-invalid'], c['jev-retries']], [1, 1, 1]);
+  assert.deepEqual([c['auto-mind-decisions'], c['auto-mind-invalid'], c['auto-mind-retries']], [1, 1, 1]);
 });

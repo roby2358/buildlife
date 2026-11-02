@@ -84,9 +84,9 @@ Lists are ordinary MIAL data lists (a node with `null` value and children). They
 | Field | Type | Notes |
 |---|---|---|
 | ticks | number | Ticks run by the core since the counters started |
-| jev-decisions | number | Jev decisions applied |
-| jev-invalid | number | Jev replies that were malformed or cut off |
-| jev-retries | number | Retries sent after a malformed reply |
+| auto-mind-decisions | number | Jev decisions applied |
+| auto-mind-invalid | number | Jev replies that were malformed or cut off |
+| auto-mind-retries | number | Retries sent after a malformed reply |
 | reflective-mind-calls | number | Sonnet calls, reflections and repairs alike |
 | repairs | number | Repair attempts |
 | reflective-mind-edits | number | Applied edits authored by Sonnet |
@@ -144,7 +144,7 @@ A Record with at least `type` (string). Types the default MIAL emits: `arrived`,
 
 | Field | Type | Notes |
 |---|---|---|
-| kind | `user` \| `inhabitant` \| `jev` \| `reflective-mind-thought` \| `edit` \| `run` \| `core-request` \| `memory` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D]. `memory` shows a compaction summary (D-40) |
+| kind | `user` \| `inhabitant` \| `auto-mind` \| `reflective-mind-thought` \| `edit` \| `run` \| `core-request` \| `memory` \| `error` \| `system` | `inhabitant` is Sonnet's `say` text, shown as the inhabitant talking. `core-request` is highlighted [D]. `memory` shows a compaction summary (D-40) |
 | text | string | |
 | seq | number | +1 per entry; marks which entries a user turn already carried |
 | at | time + tick | |
@@ -213,9 +213,9 @@ These are the definitions JS calls. They're all ordinary definitions, and all of
 | `tick` | state | WorldState (with this tick's `events`) | Every `TICK_MS` while running |
 | `actions` | state | non-empty list of function names | Building Jev's Choice options, and validating Jev's choice. Every name must be a definition taking the state, or the call is a MIAL error naming `actions` (D-42) |
 | *each name in `actions`* | state | WorldState | Jev chooses it: the core calls that definition (D-42) |
-| `jev-system` | — | string: the question's instructions | Every Jev call |
-| `jev-prompt` | state, history | string: the state Jev reads | Every Jev call |
-| `jev-trigger?` | state, events | boolean | After every tick |
+| `auto-mind-system` | — | string: the question's instructions | Every Jev call |
+| `auto-mind-prompt` | state, history | string: the state Jev reads | Every Jev call |
+| `auto-mind-trigger?` | state, events | boolean | After every tick |
 | `reflective-mind-system` | — | string | Every Sonnet call |
 | `reflective-mind-prompt` | state, history | string | Every Sonnet call |
 | `reflective-mind-trigger?` | state, events, since | boolean | After every Jev decision (`since` = `jevSinceSonnet`) |
@@ -302,7 +302,7 @@ stay(state): status = idle; goal = idle
 ### 4.6 Cadence *(MIAL)* [D: event-driven]
 *Serves:* G-2. The models can tune it.
 ```
-jev-trigger?(state, events)  = any event in events has type in {full, low, recovered, idle}
+auto-mind-trigger?(state, events)  = any event in events has type in {full, low, recovered, idle}
                                or (status = idle and tick % IDLE_RECHECK_TICKS = 1)
                                # never left idle without asking, but not every tick
 reflective-mind-trigger?(state, events, since) = since >= REFLECTIVE_MIND_EVERY_N_JEV
@@ -335,7 +335,7 @@ every TICK_MS while running and not halted:
   state = stamp-core(call tick(stamp-core(state)))  # MIAL error → repair rule
   eventHistory.push(state.events) (keep EVENT_HISTORY_N)
   repairStreak = 0                               # the tick and the trigger both succeeded
-  if call jev-trigger?(state, state.events) and jev idle and now - lastJevAt >= JEV_MIN_GAP_MS:
+  if call auto-mind-trigger?(state, state.events) and jev idle and now - lastJevAt >= JEV_MIN_GAP_MS:
     start Jev call (async)
   if a user message is waiting: try the Sonnet call
   every SAVE_EVERY_TICKS ticks: save
@@ -346,13 +346,13 @@ every TICK_MS while running and not halted:
 ```
 acts = call actions(state)
 request: POST OpenRouter /api/v1/systemone (D-41)
-         {model: JEV_MODEL, state: jev-prompt(state, history),
-          questions: {action: {type: choice, instructions: jev-system(), criteria: {a: a for a in acts}}}}
+         {model: JEV_MODEL, state: auto-mind-prompt(state, history),
+          questions: {action: {type: choice, instructions: auto-mind-system(), criteria: {a: a for a in acts}}}}
 reply:   answers.action = {choice, confidence, probabilities}; Jev writes no text
 on reply: if answers.action.choice is missing and this is the first attempt:
-            jev-invalid += 1; jev-retries += 1; chat system; resend, built from the current state
+            auto-mind-invalid += 1; auto-mind-retries += 1; chat system; resend, built from the current state
             (no gap check; the in-flight slot covers both attempts)
-          if missing again: jev-invalid += 1; chat error, no change; no third attempt
+          if missing again: auto-mind-invalid += 1; chat error, no change; no third attempt
           if action ∉ call actions(state): chat error, no change (not retried)
           else state = call the definition named choice (state);
                chat jev "→ a 0.83 · b 0.10 · c 0.05" (the three highest probabilities, highest first);
@@ -469,8 +469,8 @@ factory reset also clears requests; new game keeps them
 ## §5 Agents
 
 ### 5.1 Jev [D]
-*Serves:* G-2. Model: `~typesafe/jev-latest`, OpenRouter's alias for the newest Jev (TypeSafe's System One model; 1.14 on 2026-11-02), through OpenRouter's `/api/v1/systemone` endpoint: one Choice question per decision, answered with a choice and probabilities, never text (D-41).
-- **Sees:** only what `jev-system` and `jev-prompt` choose to show. It never sees the chat directly. Sonnet controls what Jev knows and may pass information, including what you said, through those definitions [D].
+*Serves:* G-2. The autonomous mind. The MIAL names it `auto-mind-*` (`auto-mind-system`, `auto-mind-prompt`, `auto-mind-trigger?`, `auto-mind-notes`, core stats `auto-mind-decisions/invalid/retries`, chat kind `auto-mind`); JS and these docs call it Jev, the model's name. Model: `~typesafe/jev-latest`, OpenRouter's alias for the newest Jev (TypeSafe's System One model; 1.14 on 2026-11-02), through OpenRouter's `/api/v1/systemone` endpoint: one Choice question per decision, answered with a choice and probabilities, never text (D-41).
+- **Sees:** only what `auto-mind-system` and `auto-mind-prompt` choose to show. It never sees the chat directly. Sonnet controls what Jev knows and may pass information, including what you said, through those definitions [D].
 - **Can do:** choose one item from `actions`. Nothing else.
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
 
@@ -567,7 +567,7 @@ Downloading the MIAL is a UI action over `getSource()` and `getVersion()`; it sa
 |---|---|---|
 | `ticked` | state, events | Canvas redraw |
 | `chat` | ChatEntry | Appended to the chat log. `low` and `recovered` world events become `system` entries [P] |
-| `jev-decision` | action, confidence, probabilities | Chat (`jev`) |
+| `auto-mind-decision` | action, confidence, probabilities | Chat (`auto-mind`, labelled Jev) |
 | `reflective-mind-reply` | thought, say | Chat (`reflective-mind-thought`, `inhabitant`) |
 | `edit-applied` | Edit | Chat (`edit`) and the edit list |
 | `run-applied` | comment | Chat (`run`), canvas redraw |

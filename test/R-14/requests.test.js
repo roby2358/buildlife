@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { makeGame } = require('../helpers/env');
 
-test('Jev request: one Choice question; jev-prompt is the state, jev-system the instructions, actions the options', () => {
+test('Jev request: one Choice question; auto-mind-prompt is the state, auto-mind-system the instructions, actions the options', () => {
   const { BL, game } = makeGame();
   const W = BL.world;
   const loaded = W.load(game.getSource());

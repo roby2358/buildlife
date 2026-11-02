@@ -203,8 +203,8 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
     g.state = next.value;
     const conf = parsed.confidence === undefined ? undefined : Math.round(parsed.confidence * 100) / 100;
     pushHistory([{ type: 'decision', action: parsed.action, ...(conf === undefined ? {} : { confidence: conf }) }]);
-    addChat('jev', `→ ${jevTop3(parsed, conf)}`);
-    emit('jev-decision', parsed);
+    addChat('auto-mind', `→ ${jevTop3(parsed, conf)}`);
+    emit('auto-mind-decision', parsed);
     g.counters.jevSinceSonnet += 1;
     g.counters.jevDecisions += 1;
     const trig = W.sonnetTrigger(g.loaded, g.state, W.eventsNode(g.state), g.counters.jevSinceSonnet);
@@ -307,9 +307,9 @@ BL.createGame = ({ store, api, now = () => Date.now() }) => {
 
   const coreStats = () => ({
     ticks: g.counters.ticks,
-    'jev-decisions': g.counters.jevDecisions,
-    'jev-invalid': g.counters.jevInvalid,
-    'jev-retries': g.counters.jevRetries,
+    'auto-mind-decisions': g.counters.jevDecisions,
+    'auto-mind-invalid': g.counters.jevInvalid,
+    'auto-mind-retries': g.counters.jevRetries,
     'reflective-mind-calls': g.counters.sonnetCalls,
     repairs: g.counters.repairs,
     'reflective-mind-edits': g.editLog.filter(e => e.author === 'sonnet').length,

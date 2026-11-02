@@ -58,9 +58,9 @@ test('a failed call stores nothing; its chat entries go into the next turn', asy
   assert.strictEqual(game.getConversation().turns.length, 0);
 });
 
-test('jev lines stay out of turns; an empty turn says the world prompted it', () => {
+test('auto-mind (Jev) lines stay out of turns; an empty turn says the world prompted it', () => {
   const { BL } = makeGame();
-  assert.match(BL.minds.turnText([{ kind: 'jev', text: '→ well' }, { kind: 'inhabitant', text: 'hi' }]), /Nothing new in the chat/);
+  assert.match(BL.minds.turnText([{ kind: 'auto-mind', text: '→ well' }, { kind: 'inhabitant', text: 'hi' }]), /Nothing new in the chat/);
 });
 
 test('the conversation survives a reload; a factory reset clears it and a late reply is discarded', async () => {
