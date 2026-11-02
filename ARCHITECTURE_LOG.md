@@ -2,6 +2,9 @@
 
 Newest first.
 
+### 2026-11-02: Jev follows the latest release
+JEV_MODEL `typesafe/jev-1.14` → `~typesafe/jev-latest` (your call), OpenRouter's alias for the newest Jev (D-41).
+
 ### 2026-11-02: Jev's options are functions
 `actions` now lists definition names, and the core calls the one Jev chooses with the state (D-42, R-7); `apply-action` is gone. Default world: `go-to` plus `go-bush`, `go-well`, `go-shack`, `go-tree` and `stay`; `jev-system` describes them. A listed name that isn't a one-parameter definition is a MIAL error naming `actions`. A new place needs a function and a list entry before Jev can choose it. Saved worlds whose `actions` still returns place names hit that error and go to repair; a factory reset avoids it.
 

@@ -36,7 +36,7 @@ R-n, U-n, X-n), never section numbers.
   saves. It talks to the world only through MIAL entry points (`initial-state`, `tick`, `actions` plus the functions it names,
   `jev-system`/`jev-prompt`/`jev-trigger?`, `reflective-mind-system`/`reflective-mind-prompt`/`reflective-mind-trigger?`), wrapped with type
   checks in `world.js`. The UI (`main.js`) uses only game commands, queries and events.
-- Two minds: Jev (`typesafe/jev-1.14` via OpenRouter's `/api/v1/systemone`: one Choice question, `actions` as the options, no text) picks actions; the reflective mind replies with
+- Two minds: Jev (`~typesafe/jev-latest` via OpenRouter's `/api/v1/systemone`: one Choice question, `actions` as the options, no text) picks actions; the reflective mind replies with
   `{summary, say, edits, run, core_request}` via structured output. Its calls form one stored conversation (system
   blocks preamble → source → role prompt, then turns, then the status as a trailing system message), condensed by
   Anthropic's on-demand compaction past COMPACT_AT_CHARS; thinking is never replayed. In MIAL its names are `reflective-mind-*`; JS still calls it "Sonnet" but it runs

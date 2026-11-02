@@ -468,7 +468,7 @@ factory reset also clears requests; new game keeps them
 ## §5 Agents
 
 ### 5.1 Jev [D]
-*Serves:* G-2. Model: `typesafe/jev-1.14` (TypeSafe's System One model) through OpenRouter's `/api/v1/systemone` endpoint: one Choice question per decision, answered with a choice and probabilities, never text (D-41).
+*Serves:* G-2. Model: `~typesafe/jev-latest`, OpenRouter's alias for the newest Jev (TypeSafe's System One model; 1.14 on 2026-11-02), through OpenRouter's `/api/v1/systemone` endpoint: one Choice question per decision, answered with a choice and probabilities, never text (D-41).
 - **Sees:** only what `jev-system` and `jev-prompt` choose to show. It never sees the chat directly. Sonnet controls what Jev knows and may pass information, including what you said, through those definitions [D].
 - **Can do:** choose one item from `actions`. Nothing else.
 - **Commits to:** a goal until the next trigger. The world keeps running while the call is in flight.
@@ -529,7 +529,7 @@ This is Sonnet under the fixed repair prompt. Its only job is to make the world 
 | SONNET_MAX_TOKENS | 16000 | tokens | D-7 |
 | MAX_CHAT | 500 | chat entries kept | D-11 |
 | MAX_VERSIONS | 200 | snapshots kept (v1 always) | D-22 |
-| JEV_MODEL | `typesafe/jev-1.14` | | D-41 |
+| JEV_MODEL | `~typesafe/jev-latest` | | D-41 |
 | SONNET_MODEL | `claude-haiku-5-5` | | D-17 |
 | SONNET_NAME | `Haiku` | the reflective mind's name in the UI | D-17 |
 
